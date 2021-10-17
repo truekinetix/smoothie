@@ -1018,8 +1018,9 @@
 
       if (seriesOptions.fillStyle) {
         // Close up the fill region.
-        context.lineTo(lastX, valueToYPosition(0, 0));
-        context.lineTo(firstX, valueToYPosition(0, 0));
+        var fillEndY = valueToYPosition(0, 0);
+        context.lineTo(lastX, fillEndY);
+        context.lineTo(firstX, fillEndY);
 
         context.fillStyle = seriesOptions.fillStyle;
         context.fill();
