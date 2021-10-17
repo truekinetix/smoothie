@@ -493,7 +493,8 @@
    *   strokeStyle: '#ffffff',
    *   fillStyle: undefined,
    *   interpolation: undefined;
-   *   tooltipLabel: undefined
+   *   tooltipLabel: undefined,
+   *   fillToBottom: undefined,
    * }
    * </pre>
    */
@@ -1018,7 +1019,9 @@
 
       if (seriesOptions.fillStyle) {
         // Close up the fill region.
-        var fillEndY = valueToYPosition(0, 0);
+        var fillEndY = seriesOptions.fillToBottom
+          ? dimensions.height + lineWidthMaybeZero + 1
+          : valueToYPosition(0, 0);
         context.lineTo(lastX, fillEndY);
         context.lineTo(firstX, fillEndY);
 
