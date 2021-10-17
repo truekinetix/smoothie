@@ -101,6 +101,7 @@
  *        Improve performance, by @WofWca (#135)
  *        Fix `this.delay` not being respected with `nonRealtimeData: true`, by @WofWca (#137)
  *        Fix series fill & stroke being inconsistent for last data time < render time, by @WofWca (#138)
+ *        Fill timeSeries to 0 instead of to the bottom of the canvas, add an option to restore old behavior (#140), by @socketpair & @WofWca
  */
 
 ;(function(exports) {
