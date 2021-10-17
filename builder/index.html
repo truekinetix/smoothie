@@ -424,6 +424,7 @@
           propertyName: 'interpolation',
           values: ['bezier', 'linear', 'step']
         });
+        bindCheckBox({target: chart.seriesSet[0].options, name: 'Fill to the bottom of the canvas', propertyName: 'fillToBottom'});
 
         // Grid lines
         startControlSection('Grid Lines');
