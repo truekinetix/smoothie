@@ -103,6 +103,8 @@ export interface ILabelOptions {
     /** Shows intermediate labels between min and max values along y axis. */
     showIntermediateLabels?: boolean;
     intermediateLabelSameAxis?: boolean;
+    /** Rotate x-axis labels so they are printed vertical */
+    rotateXAxisLabels?: boolean;
 }
 
 export interface ITitleOptions {

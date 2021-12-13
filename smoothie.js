@@ -229,7 +229,7 @@
 	// Reject NaN
 	if (isNaN(timestamp) || isNaN(value)){
 		return
-	}  
+	}
 
     var lastI = this.data.length - 1;
     if (lastI >= 0) {
@@ -334,6 +334,7 @@
    *     precision: 2,
    *     showIntermediateLabels: false,          // shows intermediate labels between min and max values along y axis
    *     intermediateLabelSameAxis: true,
+   *     rotateXAxisLabels: false,               // print x-axis labels vertical
    *   },
    *   title
    *   {
@@ -426,6 +427,7 @@
       precision: 2,
       showIntermediateLabels: false,
       intermediateLabelSameAxis: true,
+      rotateXAxisLabels: false,
     },
     title: {
       text: '',
@@ -591,7 +593,7 @@
 
   SmoothieChart.prototype.updateTooltip = function () {
     if(!this.options.tooltip){
-     return; 
+     return;
     }
     var el = this.getTooltipEl();
 
@@ -638,7 +640,7 @@
     this.mousePageX = evt.pageX;
     this.mousePageY = evt.pageY;
     if(!this.options.tooltip){
-     return; 
+     return;
     }
     var el = this.getTooltipEl();
     el.style.top = Math.round(this.mousePageY) + 'px';
@@ -1090,8 +1092,14 @@
            t >= oldestValidTime;
            t -= chartOptions.grid.millisPerLine) {
         var gx = timeToXPosition(t, 0);
+        if (chartOptions.labels.rotateXAxisLabels) {
+          // mgtm draw x axis labels rotated
+          context.save();
+          context.translate(gx - tsWidth, dimensions.height - 2);
+          context.rotate(-0.5*Math.PI);
+        }
         // Only draw the timestamp if it won't overlap with the previously drawn one.
-        if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  {
+        else if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  {
           // Formats the timestamp based on user specified formatting function
           // SmoothieChart.timeFormatter function above is one such formatting option
           var tx = new Date(t),
@@ -1103,7 +1111,14 @@
             : gx - tsWidth - 2;
 
           context.fillStyle = chartOptions.labels.fillStyle;
-          if(chartOptions.scrollBackwards) {
+          if (chartOptions.labels.rotateXAxisLabels) {
+            if(chartOptions.scrollBackwards) {
+              context.fillText(ts, gx, tsWidth);
+            } else {
+              context.fillText(ts, 0, tsWidth);
+            }
+            context.restore();
+          } else if(chartOptions.scrollBackwards) {
             context.fillText(ts, gx, dimensions.height - 2);
           } else {
             context.fillText(ts, gx - tsWidth, dimensions.height - 2);
