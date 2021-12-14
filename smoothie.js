@@ -1092,14 +1092,14 @@
            t >= oldestValidTime;
            t -= chartOptions.grid.millisPerLine) {
         var gx = timeToXPosition(t, 0);
-        if (chartOptions.labels.rotateXAxisLabels) {
-          // mgtm draw x axis labels rotated
-          context.save();
-          context.translate(gx - tsWidth, dimensions.height - 2);
-          context.rotate(-0.5*Math.PI);
-        }
         // Only draw the timestamp if it won't overlap with the previously drawn one.
-        else if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  {
+        if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  {
+          if (chartOptions.labels.rotateXAxisLabels) {
+            // draw x axis labels rotated
+            context.save();
+            context.translate(gx - tsWidth, dimensions.height - 2);
+            context.rotate(-0.5*Math.PI);
+          }
           // Formats the timestamp based on user specified formatting function
           // SmoothieChart.timeFormatter function above is one such formatting option
           var tx = new Date(t),
