@@ -158,6 +158,7 @@ export interface IChartOptions {
     grid?: IGridOptions;
 
     labels?: ILabelOptions;
+    labels2?: ILabelOptions;
 
     title?: ITitleOptions;
 

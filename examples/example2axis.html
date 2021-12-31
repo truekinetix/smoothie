@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="../smoothie.js"></script>
+    <script type="text/javascript">
+      // Randomly add a data point every 500ms
+      var random = new TimeSeries();
+      setInterval(function() {
+        random.append(Date.now(), Math.random() * 10);
+      }, 500);
+
+      var random1 = new TimeSeries();
+      setInterval(function() {
+        random1.append(Date.now(), Math.random() * 100);
+      }, 500);
+
+      function createTimeline() {
+        var chart = new SmoothieChart({
+          maxValueScale: 1.05,  // 5% headroom
+          grid: {
+                // millisPerLine: 60000, // 60000
+                strokeStyle: 'rgb(255, 255, 255, .3)',
+                fillStyle: 'rgba(0,0,0,0)', // transparent
+                borderVisible: false,
+                verticalSections: 5
+          },
+          title: {
+                text: 'graphTitle',
+                verticalAlign: 'middle',
+                fontSize: 25,
+                fillStyle: '#ffffff',
+                fontFamily: 'Sans-Serif',
+            },
+            labels: {
+                fontSize: 12,
+                fillStyle: '#00ff00',
+                showIntermediateLabels: true,
+                rotateXAxisLabels: true,
+                precision: 1,
+                intermediateLabelSameAxis: true,
+            },
+            labels2: {
+              fillStyle: '#ff8800',
+              // showIntermediateLabels: true,
+            }
+        });
+        chart.addTimeSeries(random, { strokeStyle: 'rgba(0, 255, 0, 1)', fillStyle: 'rgba(0, 255, 0, 0.2)', lineWidth: 4, interpolation: "step" });
+        chart.addTimeSeries(random1, { strokeStyle: 'rgba(255, 128, 0, 1)', fillStyle: 'rgba(255, 128, 0, 0.2)', lineWidth: 4 });
+        chart.streamTo(document.getElementById("chart"), 500);
+      }
+    </script>
+  </head>
+  <body onload="createTimeline()" style="color:white;background-color:#333333">
+    <p>
+      Demo of 2-axis option where values are scaled to the full chart range and
+      labels for the second trace are displayed on the left axis.
+    </p>
+    <canvas id="chart" width="700" height="500"></canvas>
+    <p>
+      Enable this mode by adding exactly two TimeSeries and setting the 'labels2' options.
+    </p>
+  </body>
+</html>

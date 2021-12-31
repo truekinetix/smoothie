@@ -189,6 +189,8 @@
     this.data = [];
     this.maxValue = Number.NaN; // The maximum value ever seen in this TimeSeries.
     this.minValue = Number.NaN; // The minimum value ever seen in this TimeSeries.
+    this.currentValueRange = 1;
+    this.currentVisMinValue = 0;
   };
 
   /**
@@ -512,6 +514,13 @@
   };
 
   /**
+   * True if two axes should render independently
+   * @returns bool
+   */
+  SmoothieChart.prototype.doubleAxis = function() {
+    return(this.options.labels2 && this.seriesSet.length == 2);
+  }
+  /**
    * Removes the specified <code>TimeSeries</code> from the chart.
    */
   SmoothieChart.prototype.removeTimeSeries = function(timeSeries) {
@@ -783,6 +792,13 @@
       if (!isNaN(timeSeries.minValue)) {
         chartMinValue = !isNaN(chartMinValue) ? Math.min(chartMinValue, timeSeries.minValue) : timeSeries.minValue;
       }
+      if (this.doubleAxis()) {
+        let targetValueRange = timeSeries.maxValue - timeSeries.minValue;
+        let valueRangeDiff = targetValueRange - (timeSeries.currentValueRange || 0);
+        let minValueDiff = timeSeries.minValue - (timeSeries.currentVisMinValue || 1);
+        timeSeries.currentValueRange += (chartOptions.scaleSmoothing * valueRangeDiff) || 0;
+        timeSeries.currentVisMinValue += (chartOptions.scaleSmoothing * minValueDiff) || 1;
+      }
     }
 
     // Scale the chartMaxValue to add padding at the top if required
@@ -861,6 +877,13 @@
               unsnapped = this.currentValueRange === 0
                 ? dimensions.height
                 : dimensions.height * (1 - offset / this.currentValueRange);
+          return Util.pixelSnap(unsnapped, lineWidth);
+        }.bind(this),
+        singleValueToYPosition = function(value, lineWidth, timeSeries) {
+          let offset = value - timeSeries.currentVisMinValue,
+              unsnapped = timeSeries.currentValueRange === 0
+                ? dimensions.height
+                : dimensions.height * (1 - offset / timeSeries.currentValueRange);
           return Util.pixelSnap(unsnapped, lineWidth);
         }.bind(this),
         timeToXPosition = function(t, lineWidth) {
@@ -946,6 +969,7 @@
       }
     }
 
+    let isTwoAxis = this.doubleAxis();
     // For each data set...
     for (var d = 0; d < this.seriesSet.length; d++) {
       var timeSeries = this.seriesSet[d].timeSeries,
@@ -967,7 +991,8 @@
       context.beginPath();
       // Retain lastX, lastY for calculating the control points of bezier curves.
       var firstX = timeToXPosition(dataSet[0][0], lineWidthMaybeZero),
-        firstY = valueToYPosition(dataSet[0][1], lineWidthMaybeZero),
+        // scale per dataset if two traces
+        firstY = (isTwoAxis) ? singleValueToYPosition(dataSet[0][1], lineWidthMaybeZero, timeSeries) : valueToYPosition(dataSet[0][1], lineWidthMaybeZero),
         lastX = firstX,
         lastY = firstY,
         draw;
@@ -1016,7 +1041,7 @@
       for (var i = 1; i < dataSet.length; i++) {
         var iThData = dataSet[i],
             x = timeToXPosition(iThData[0], lineWidthMaybeZero),
-            y = valueToYPosition(iThData[1], lineWidthMaybeZero);
+            y = (isTwoAxis) ? singleValueToYPosition(iThData[1], lineWidthMaybeZero, timeSeries) : valueToYPosition(iThData[1], lineWidthMaybeZero);
         draw(x, y, lastX, lastY);
         lastX = x; lastY = y;
       }
@@ -1053,26 +1078,35 @@
 
     var labelsOptions = chartOptions.labels;
     // Draw the axis values on the chart.
-    if (!labelsOptions.disabled && !isNaN(this.valueRange.min) && !isNaN(this.valueRange.max)) {
-      var maxValueString = chartOptions.yMaxFormatter(this.valueRange.max, labelsOptions.precision),
-          minValueString = chartOptions.yMinFormatter(this.valueRange.min, labelsOptions.precision),
+    let _valueRange = (isTwoAxis) ? { min: this.seriesSet[0].timeSeries.minValue, max: this.seriesSet[0].timeSeries.maxValue} : this.valueRange;
+    if (!labelsOptions.disabled && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)) {
+      var maxValueString = chartOptions.yMaxFormatter(_valueRange.max, labelsOptions.precision),
+          minValueString = chartOptions.yMinFormatter(_valueRange.min, labelsOptions.precision),
           maxLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(maxValueString).width - 2,
           minLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(minValueString).width - 2;
       context.fillStyle = labelsOptions.fillStyle;
       context.fillText(maxValueString, maxLabelPos, labelsOptions.fontSize);
       context.fillText(minValueString, minLabelPos, dimensions.height - 2);
+      if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
+        let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue, chartOptions.labels2.precision || labelsOptions.precision),
+            minValueString = chartOptions.yMinFormatter(this.seriesSet[1].timeSeries.minValue, chartOptions.labels2.precision || labelsOptions.precision);
+        context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
+        context.fillText(maxValueString, 0, chartOptions.labels2.fontSize || labelsOptions.fontSize);
+        context.fillText(minValueString, 0, dimensions.height - 2);
+        context.fillStyle = labelsOptions.fillStyle;
+      }
     }
 
     // Display intermediate y axis labels along y-axis to the left of the chart
     if ( labelsOptions.showIntermediateLabels
-          && !isNaN(this.valueRange.min) && !isNaN(this.valueRange.max)
+          && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)
           && chartOptions.grid.verticalSections > 0) {
       // show a label above every vertical section divider
-      var step = (this.valueRange.max - this.valueRange.min) / chartOptions.grid.verticalSections;
+      var step = (_valueRange.max - _valueRange.min) / chartOptions.grid.verticalSections;
       var stepPixels = dimensions.height / chartOptions.grid.verticalSections;
       for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
         var gy = dimensions.height - Math.round(v * stepPixels),
-            yValue = chartOptions.yIntermediateFormatter(this.valueRange.min + (v * step), labelsOptions.precision),
+            yValue = chartOptions.yIntermediateFormatter(_valueRange.min + (v * step), labelsOptions.precision),
             //left of right axis?
             intermediateLabelPos =
               labelsOptions.intermediateLabelSameAxis
@@ -1080,6 +1114,18 @@
               : (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0);
 
         context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
+      }
+      if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
+        var step = (this.seriesSet[1].timeSeries.maxValue - this.seriesSet[1].timeSeries.minValue) / chartOptions.grid.verticalSections;
+        var stepPixels = dimensions.height / chartOptions.grid.verticalSections;
+        context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
+        for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
+          var gy = dimensions.height - Math.round(v * stepPixels),
+              yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.minValue + (v * step), chartOptions.labels2.precision || labelsOptions.precision);
+          // left axis
+          context.fillText(yValue, 0, gy - chartOptions.grid.lineWidth);
+        }
+        context.fillStyle = labelsOptions.fillStyle;
       }
     }
 
