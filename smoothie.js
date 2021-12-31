@@ -1089,8 +1089,8 @@
       context.fillText(maxValueString, maxLabelPos, labelsOptions.fontSize);
       context.fillText(minValueString, minLabelPos, dimensions.height - 2);
       if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
-        let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue, chartOptions.labels2.precision || labelsOptions.precision),
-            minValueString = chartOptions.yMinFormatter(this.seriesSet[1].timeSeries.minValue, chartOptions.labels2.precision || labelsOptions.precision);
+        let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue, chartOptions.labels2.precision ?? labelsOptions.precision),
+            minValueString = chartOptions.yMinFormatter(this.seriesSet[1].timeSeries.minValue, chartOptions.labels2.precision ?? labelsOptions.precision);
         context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
         context.fillText(maxValueString, 0, chartOptions.labels2.fontSize || labelsOptions.fontSize);
         context.fillText(minValueString, 0, dimensions.height - 2);
@@ -1122,7 +1122,7 @@
         context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
         for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
           var gy = dimensions.height - Math.round(v * stepPixels),
-              yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.minValue + (v * step), chartOptions.labels2.precision || labelsOptions.precision);
+              yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.minValue + (v * step), chartOptions.labels2.precision ?? labelsOptions.precision);
           // left axis
           context.fillText(yValue, 0, gy - chartOptions.grid.lineWidth);
         }
