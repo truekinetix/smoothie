@@ -436,7 +436,8 @@
       fillStyle: '#ffffff',
       fontSize: 15,
       fontFamily: 'monospace',
-      verticalAlign: 'middle'
+      verticalAlign: 'middle',
+      horizontalAlign: 'left',
     },
     horizontalLines: [],
     tooltip: false,
@@ -1176,7 +1177,21 @@
     // Display title.
     if (chartOptions.title.text !== '') {
       context.font = chartOptions.title.fontSize + 'px ' + chartOptions.title.fontFamily;
-      var titleXPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(chartOptions.title.text).width - 2 : 2;
+      let xAlign = chartOptions.title.horizontalAlign || ((chartOptions.scrollBackwards) ? 'right' : 'left');
+      let titleXPos;
+      switch (xAlign) {
+        case 'right':
+          titleXPos = dimensions.width - context.measureText(chartOptions.title.text).width - 2;
+          break;
+        case 'center':
+          titleXPos = (dimensions.width - context.measureText(chartOptions.title.text).width) / 2;
+          break;
+        case 'left':
+        default:
+          titleXPos = 2;
+          break;
+      }
+      // var titleXPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(chartOptions.title.text).width - 2 : 2;
       if (chartOptions.title.verticalAlign == 'bottom') {
         context.textBaseline = 'bottom';
         var titleYPos = dimensions.height;

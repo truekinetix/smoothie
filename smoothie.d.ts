@@ -116,6 +116,7 @@ export interface ITitleOptions {
     fontFamily?: string;
     /** The vertical position of the text. Defaults to "middle". */
     verticalAlign?: "top" | "middle" | "bottom";
+    horizontalAlign?: "left" | "center" | "right";
 }
 
 export interface IRange { min: number; max: number }
