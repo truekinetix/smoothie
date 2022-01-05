@@ -794,7 +794,7 @@
         chartMinValue = !isNaN(chartMinValue) ? Math.min(chartMinValue, timeSeries.minValue) : timeSeries.minValue;
       }
       if (this.doubleAxis()) {
-        let targetValueRange = timeSeries.maxValue - timeSeries.minValue;
+        let targetValueRange = (chartOptions.maxValueScale * timeSeries.maxValue) - timeSeries.minValue;
         let valueRangeDiff = targetValueRange - (timeSeries.currentValueRange || 0);
         let minValueDiff = timeSeries.minValue - (timeSeries.currentVisMinValue || 1);
         timeSeries.currentValueRange += (chartOptions.scaleSmoothing * valueRangeDiff) || 0;
@@ -1079,7 +1079,7 @@
 
     var labelsOptions = chartOptions.labels;
     // Draw the axis values on the chart.
-    let _valueRange = (isTwoAxis) ? { min: this.seriesSet[0].timeSeries.minValue, max: this.seriesSet[0].timeSeries.maxValue} : this.valueRange;
+    let _valueRange = (isTwoAxis) ? { min: this.seriesSet[0].timeSeries.minValue, max: this.seriesSet[0].timeSeries.maxValue * chartOptions.maxValueScale} : this.valueRange;
     if (!labelsOptions.disabled && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)) {
       var maxValueString = chartOptions.yMaxFormatter(_valueRange.max, labelsOptions.precision),
           minValueString = chartOptions.yMinFormatter(_valueRange.min, labelsOptions.precision),
@@ -1089,7 +1089,7 @@
       context.fillText(maxValueString, maxLabelPos, labelsOptions.fontSize);
       context.fillText(minValueString, minLabelPos, dimensions.height - 2);
       if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
-        let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue, chartOptions.labels2.precision ?? labelsOptions.precision),
+        let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue * chartOptions.maxValueScale, chartOptions.labels2.precision ?? labelsOptions.precision),
             minValueString = chartOptions.yMinFormatter(this.seriesSet[1].timeSeries.minValue, chartOptions.labels2.precision ?? labelsOptions.precision);
             maxLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(maxValueString).width - 2 : 0,
             minLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(minValueString).width - 2 : 0;
@@ -1148,7 +1148,6 @@
           ? context.measureText(minValueString).width
           : dimensions.width - context.measureText(minValueString).width + 4;
       }
-      console.log(textUntilX);
       for (var t = time - (time % chartOptions.grid.millisPerLine);
            t >= oldestValidTime;
            t -= chartOptions.grid.millisPerLine) {
