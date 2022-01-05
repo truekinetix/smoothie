@@ -1091,9 +1091,11 @@
       if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
         let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue, chartOptions.labels2.precision ?? labelsOptions.precision),
             minValueString = chartOptions.yMinFormatter(this.seriesSet[1].timeSeries.minValue, chartOptions.labels2.precision ?? labelsOptions.precision);
+            maxLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(maxValueString).width - 2 : 0,
+            minLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(minValueString).width - 2 : 0;
         context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
-        context.fillText(maxValueString, 0, chartOptions.labels2.fontSize || labelsOptions.fontSize);
-        context.fillText(minValueString, 0, dimensions.height - 2);
+        context.fillText(maxValueString, maxLabelPos, chartOptions.labels2.fontSize || labelsOptions.fontSize);
+        context.fillText(minValueString, minLabelPos, dimensions.height - 2);
         context.fillStyle = labelsOptions.fillStyle;
       }
     }
@@ -1123,8 +1125,12 @@
         for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
           var gy = dimensions.height - Math.round(v * stepPixels),
               yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.minValue + (v * step), chartOptions.labels2.precision ?? labelsOptions.precision);
-          // left axis
-          context.fillText(yValue, 0, gy - chartOptions.grid.lineWidth);
+          // opposite axis
+          intermediateLabelPos =
+              labelsOptions.intermediateLabelSameAxis
+              ? (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0)
+              : (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2);
+          context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
         }
         context.fillStyle = labelsOptions.fillStyle;
       }
@@ -1132,9 +1138,17 @@
 
     // Display timestamps along x-axis at the bottom of the chart.
     if (chartOptions.timestampFormatter && chartOptions.grid.millisPerLine > 0) {
-      var textUntilX = chartOptions.scrollBackwards
-        ? context.measureText(minValueString).width
-        : dimensions.width - context.measureText(minValueString).width + 4;
+      var textUntilX;
+      if (chartOptions.labels.rotateXAxisLabels) {
+        textUntilX = chartOptions.scrollBackwards
+          ? context.measureText('M').width
+          : dimensions.width - context.measureText('M').width; + 4;
+      } else {
+        textUntilX = chartOptions.scrollBackwards
+          ? context.measureText(minValueString).width
+          : dimensions.width - context.measureText(minValueString).width + 4;
+      }
+      console.log(textUntilX);
       for (var t = time - (time % chartOptions.grid.millisPerLine);
            t >= oldestValidTime;
            t -= chartOptions.grid.millisPerLine) {
@@ -1151,7 +1165,7 @@
           // SmoothieChart.timeFormatter function above is one such formatting option
           var tx = new Date(t),
             ts = chartOptions.timestampFormatter(tx),
-            tsWidth = context.measureText(ts).width;
+            tsWidth = chartOptions.labels.rotateXAxisLabels ? context.measureText('M').width : context.measureText(ts).width;
 
           textUntilX = chartOptions.scrollBackwards
             ? gx + tsWidth + 2
@@ -1160,7 +1174,7 @@
           context.fillStyle = chartOptions.labels.fillStyle;
           if (chartOptions.labels.rotateXAxisLabels) {
             if(chartOptions.scrollBackwards) {
-              context.fillText(ts, gx, tsWidth);
+              context.fillText(ts, 0, tsWidth);
             } else {
               context.fillText(ts, 0, tsWidth);
             }

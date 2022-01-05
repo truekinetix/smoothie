@@ -5,21 +5,29 @@
     <script type="text/javascript" src="../smoothie.js"></script>
     <script type="text/javascript">
       // Randomly add a data point every 500ms
-      var random = new TimeSeries();
+      var random1 = new TimeSeries();
+      var random2 = new TimeSeries();
+
       setInterval(function() {
-        random.append(Date.now(), Math.random() * 10);
+        var ts = Date.now();
+        random1.append(ts, Math.random() * 10);
+        random2.append(ts, Math.random() * 10000);
       }, 500);
 
-      var random1 = new TimeSeries();
-      setInterval(function() {
-        random1.append(Date.now(), Math.random() * 10000);
-      }, 500);
+    function dateToHhMmSsString(date) {
+      return date.toLocaleTimeString({
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+         });
+      }
 
       function createTimeline() {
         var chart = new SmoothieChart({
           maxValueScale: 1.05,  // 5% headroom
+          timestampFormatter: dateToHhMmSsString,
+          // scrollBackwards: true,
           grid: {
-                // millisPerLine: 60000, // 60000
                 strokeStyle: 'rgb(255, 255, 255, .3)',
                 fillStyle: 'rgba(0,0,0,0)', // transparent
                 borderVisible: false,
@@ -34,33 +42,37 @@
                 fontFamily: 'Sans-Serif',
             },
             labels: {
-                fontSize: 12,
                 fillStyle: '#00ff00',
+                precision: 2,
+                fontSize: 12,
                 showIntermediateLabels: true,
                 rotateXAxisLabels: true,
-                precision: 2,
-                intermediateLabelSameAxis: true,
+                intermediateLabelSameAxis: true, // false would be very confusing when using two axes!
             },
             labels2: {
               fillStyle: '#ff8800',
               precision: 0,
-              // showIntermediateLabels: true, // ignored, follows main labels setting
+              // Settings below are ignored, they follow the main labels setting
+              // fontSize: 20,
+              // showIntermediateLabels: true,
+              // rotateXAxisLabels: false,
+              // intermediateLabelSameAxis: false,
             }
         });
-        chart.addTimeSeries(random, { strokeStyle: 'rgba(0, 255, 0, 1)', fillStyle: 'rgba(0, 255, 0, 0.2)', lineWidth: 3, interpolation: "step" });
-        chart.addTimeSeries(random1, { strokeStyle: 'rgba(255, 128, 0, 1)', fillStyle: 'rgba(255, 128, 0, 0.2)', lineWidth: 4 });
+        chart.addTimeSeries(random1, { strokeStyle: 'rgba(0, 255, 0, 1)', fillStyle: 'rgba(0, 255, 0, 0.2)', lineWidth: 3, interpolation: "step" });
+        chart.addTimeSeries(random2, { strokeStyle: 'rgba(255, 128, 0, 1)', fillStyle: 'rgba(255, 128, 0, 0.2)', lineWidth: 4 });
         chart.streamTo(document.getElementById("chart"), 500);
       }
     </script>
   </head>
   <body onload="createTimeline()" style="color:white;background-color:#333333">
-    <p>
-      Demo of 2-axis option where values are scaled to the full chart range and
-      labels for the second trace are displayed on the left axis.
-    </p>
     <canvas id="chart" width="700" height="500"></canvas>
     <p>
-      Enable this mode by adding exactly two TimeSeries and setting the 'labels2' options.
+      Demo of 2-axis option where values are scaled to the full chart range and
+      labels for the second trace are displayed on the opposite axis.
+    </p>
+    <p>
+      Enable this mode by adding exactly two <code>TimeSeries</code> and setting the <code>labels2</code> options.
     </p>
   </body>
 </html>
