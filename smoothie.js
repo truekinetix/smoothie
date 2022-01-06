@@ -336,7 +336,11 @@
    *     precision: 2,
    *     showIntermediateLabels: false,          // shows intermediate labels between min and max values along y axis
    *     intermediateLabelSameAxis: true,
+   *   },
+   *   xLabels
+   *   {
    *     rotateXAxisLabels: false,               // print x-axis labels vertical
+   *     fillStyle: '#ffffff',                   // colour for text of labels, default same as text label
    *   },
    *   title
    *   {
@@ -429,6 +433,8 @@
       precision: 2,
       showIntermediateLabels: false,
       intermediateLabelSameAxis: true,
+    },
+    xLabels: {
       rotateXAxisLabels: false,
     },
     title: {
@@ -794,9 +800,16 @@
         chartMinValue = !isNaN(chartMinValue) ? Math.min(chartMinValue, timeSeries.minValue) : timeSeries.minValue;
       }
       if (this.doubleAxis()) {
-        let targetValueRange = (chartOptions.maxValueScale * timeSeries.maxValue) - timeSeries.minValue;
+        let valueRange = {min: timeSeries.minValue, max: timeSeries.maxValue};
+        if (this.options.yRangeFunction) {
+          valueRange = this.options.yRangeFunction(valueRange);
+        } else {
+          valueRange.max *= chartOptions.maxValueScale;
+        }
+        let targetValueRange = valueRange.max - valueRange.min;
         let valueRangeDiff = targetValueRange - (timeSeries.currentValueRange || 0);
         let minValueDiff = timeSeries.minValue - (timeSeries.currentVisMinValue || 1);
+        timeSeries.valueRange = valueRange;
         timeSeries.currentValueRange += (chartOptions.scaleSmoothing * valueRangeDiff) || 0;
         timeSeries.currentVisMinValue += (chartOptions.scaleSmoothing * minValueDiff) || 1;
       }
@@ -1079,7 +1092,7 @@
 
     var labelsOptions = chartOptions.labels;
     // Draw the axis values on the chart.
-    let _valueRange = (isTwoAxis) ? { min: this.seriesSet[0].timeSeries.minValue, max: this.seriesSet[0].timeSeries.maxValue * chartOptions.maxValueScale} : this.valueRange;
+    let _valueRange = (isTwoAxis) ? this.seriesSet[0].timeSeries.valueRange : this.valueRange;
     if (!labelsOptions.disabled && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)) {
       var maxValueString = chartOptions.yMaxFormatter(_valueRange.max, labelsOptions.precision),
           minValueString = chartOptions.yMinFormatter(_valueRange.min, labelsOptions.precision),
@@ -1089,8 +1102,9 @@
       context.fillText(maxValueString, maxLabelPos, labelsOptions.fontSize);
       context.fillText(minValueString, minLabelPos, dimensions.height - 2);
       if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
-        let maxValueString = chartOptions.yMaxFormatter(this.seriesSet[1].timeSeries.maxValue * chartOptions.maxValueScale, chartOptions.labels2.precision ?? labelsOptions.precision),
-            minValueString = chartOptions.yMinFormatter(this.seriesSet[1].timeSeries.minValue, chartOptions.labels2.precision ?? labelsOptions.precision);
+        let _value2Range = this.seriesSet[1].timeSeries.valueRange;
+        let maxValueString = chartOptions.yMaxFormatter(_value2Range.max, chartOptions.labels2.precision ?? labelsOptions.precision),
+            minValueString = chartOptions.yMinFormatter(_value2Range.min, chartOptions.labels2.precision ?? labelsOptions.precision);
             maxLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(maxValueString).width - 2 : 0,
             minLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(minValueString).width - 2 : 0;
         context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
@@ -1119,12 +1133,12 @@
         context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
       }
       if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
-        var step = (this.seriesSet[1].timeSeries.maxValue - this.seriesSet[1].timeSeries.minValue) / chartOptions.grid.verticalSections;
+        var step = (this.seriesSet[1].timeSeries.valueRange.max - this.seriesSet[1].timeSeries.valueRange.min) / chartOptions.grid.verticalSections;
         var stepPixels = dimensions.height / chartOptions.grid.verticalSections;
         context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
         for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
           var gy = dimensions.height - Math.round(v * stepPixels),
-              yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.minValue + (v * step), chartOptions.labels2.precision ?? labelsOptions.precision);
+              yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.valueRange.min + (v * step), chartOptions.labels2.precision ?? labelsOptions.precision);
           // opposite axis
           intermediateLabelPos =
               labelsOptions.intermediateLabelSameAxis
@@ -1139,7 +1153,7 @@
     // Display timestamps along x-axis at the bottom of the chart.
     if (chartOptions.timestampFormatter && chartOptions.grid.millisPerLine > 0) {
       var textUntilX;
-      if (chartOptions.labels.rotateXAxisLabels) {
+      if (chartOptions.xLabels.rotateXAxisLabels) {
         textUntilX = chartOptions.scrollBackwards
           ? context.measureText('M').width
           : dimensions.width - context.measureText('M').width; + 4;
@@ -1154,7 +1168,7 @@
         var gx = timeToXPosition(t, 0);
         // Only draw the timestamp if it won't overlap with the previously drawn one.
         if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  {
-          if (chartOptions.labels.rotateXAxisLabels) {
+          if (chartOptions.xLabels.rotateXAxisLabels) {
             // draw x axis labels rotated
             context.save();
             context.translate(gx - tsWidth, dimensions.height - 2);
@@ -1164,14 +1178,14 @@
           // SmoothieChart.timeFormatter function above is one such formatting option
           var tx = new Date(t),
             ts = chartOptions.timestampFormatter(tx),
-            tsWidth = chartOptions.labels.rotateXAxisLabels ? context.measureText('M').width : context.measureText(ts).width;
+            tsWidth = chartOptions.xLabels.rotateXAxisLabels ? context.measureText('M').width : context.measureText(ts).width;
 
           textUntilX = chartOptions.scrollBackwards
             ? gx + tsWidth + 2
             : gx - tsWidth - 2;
 
-          context.fillStyle = chartOptions.labels.fillStyle;
-          if (chartOptions.labels.rotateXAxisLabels) {
+          context.fillStyle = chartOptions.xLabels.fillStyle ?? chartOptions.labels.fillStyle;
+          if (chartOptions.xLabels.rotateXAxisLabels) {
             if(chartOptions.scrollBackwards) {
               context.fillText(ts, 0, tsWidth);
             } else {

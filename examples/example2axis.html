@@ -26,9 +26,10 @@
 
       function createTimeline() {
         var chart = new SmoothieChart({
-          maxValueScale: 1.05,  // 5% headroom
+          maxValueScale: 1.05,  // 5% headroom, ignored with custom yRangeFunction
           timestampFormatter: dateToHhMmSsString,
           millisPerPixel: 50,
+          yRangeFunction: customYRangeFunction,
 
           // scrollBackwards: true,
           grid: {
@@ -43,34 +44,72 @@
                 verticalAlign: 'top',
                 horizontalAlign: 'center',
                 fontSize: 25,
-                fillStyle: '#ffffff',
+                fillStyle: '#aaa',
                 fontFamily: 'Sans-Serif',
             },
             labels: {
-                fillStyle: '#00ff00',
+                fillStyle: 'rgb(97, 185, 255)',
                 precision: 2,
                 fontSize: 12,
                 showIntermediateLabels: true,
-                rotateXAxisLabels: true,
                 intermediateLabelSameAxis: true, // false would be very confusing when using two axes!
             },
+            xLabels: {
+              rotateXAxisLabels: true,
+              fillStyle: 'white',
+            },
             labels2: {
-              fillStyle: '#ff8800',
+              fillStyle: 'rgb(245, 158, 0)',
               precision: 0,
               // Settings below are ignored, they follow the main labels setting
               // fontSize: 20,
               // showIntermediateLabels: true,
-              // rotateXAxisLabels: false,
               // intermediateLabelSameAxis: false,
             }
         });
-        chart.addTimeSeries(random1, { strokeStyle: 'rgba(0, 255, 0, 1)', fillStyle: 'rgba(0, 255, 0, 0.2)', lineWidth: 3, interpolation: "step" });
-        chart.addTimeSeries(random2, { strokeStyle: 'rgba(255, 128, 0, 1)', fillStyle: 'rgba(255, 128, 0, 0.2)', lineWidth: 4 });
+        chart.addTimeSeries(random1, { strokeStyle: 'rgb(97, 185, 255)', fillStyle: 'rgba(97, 185, 255, 0.1)', lineWidth: 3, interpolation: "step" });
+        chart.addTimeSeries(random2, { strokeStyle: 'rgb(245, 158, 0)', fillStyle: 'rgba(245, 158, 0, 0.1)', lineWidth: 4 });
         chart.streamTo(document.getElementById("chart"), 500);
       }
+
+      // A function for nicely rounding numbers up for human beings.
+      // Eg: 180.2 -> 200
+      //       3.5 -> 5
+      //       8.9 -> 10
+      var ln10 = Math.log(10);
+      var roundUpHumane = function(value)
+      {
+        // calculate the magnitude of the value
+        var mag = Math.floor(Math.log(value) / ln10);
+        var magPow = Math.pow(10, mag);
+
+        // calculate the most significant digit of the value
+        var magMsd = Math.ceil(value / magPow);
+
+        // promote the MSD to either 1, 2, or 5
+        if (magMsd > 5.0)
+          magMsd = 10.0;
+        else if (magMsd > 2.0)
+          magMsd = 5.0;
+        else if (magMsd > 1.0)
+          magMsd = 2.0;
+
+        return magMsd * magPow;
+      };
+
+      var customYRangeFunction = function(range) {
+        // Find the greatest absolute value
+        var max = Math.max(Math.abs(range.min), Math.abs(range.max));
+        // Ensure we're viewing at least a quarter of the range, so that
+        // very small values don't appear exaggeratedly large
+        max = Math.max(max, 200);
+        // Round the limit up to a more pleasant number
+        max = roundUpHumane(max);
+        return {min: 0, max: max};
+      };
     </script>
   </head>
-  <body onload="createTimeline()" style="color:white;background-color:#333333">
+  <body onload="createTimeline()" style="color:white;background-color:#333333;font-family: sans-serif;">
     <canvas id="chart" width="700" height="500"></canvas>
     <p>
       Demo of 2-axis option where values are scaled to the full chart range and

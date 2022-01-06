@@ -103,8 +103,12 @@ export interface ILabelOptions {
     /** Shows intermediate labels between min and max values along y axis. */
     showIntermediateLabels?: boolean;
     intermediateLabelSameAxis?: boolean;
+}
+
+export interface IxLabelOptions {
     /** Rotate x-axis labels so they are printed vertical */
     rotateXAxisLabels?: boolean;
+    fillStyle?: string;
 }
 
 export interface ITitleOptions {
@@ -116,6 +120,7 @@ export interface ITitleOptions {
     fontFamily?: string;
     /** The vertical position of the text. Defaults to "middle". */
     verticalAlign?: "top" | "middle" | "bottom";
+    /** The horizontal position of the text. Defaults to "left". */
     horizontalAlign?: "left" | "center" | "right";
 }
 
@@ -159,7 +164,10 @@ export interface IChartOptions {
     grid?: IGridOptions;
 
     labels?: ILabelOptions;
+    /** Label options for double axis layout, second axis */
     labels2?: ILabelOptions;
+    /** X-axis label options */
+    xLabels?: IxLabelOptions;
 
     title?: ITitleOptions;
 
