@@ -808,10 +808,10 @@
         }
         let targetValueRange = valueRange.max - valueRange.min;
         let valueRangeDiff = targetValueRange - (timeSeries.currentValueRange || 0);
-        let minValueDiff = timeSeries.minValue - (timeSeries.currentVisMinValue || 1);
+        let minValueDiff = timeSeries.minValue - (timeSeries.currentVisMinValue || 0);
         timeSeries.valueRange = valueRange;
         timeSeries.currentValueRange += (chartOptions.scaleSmoothing * valueRangeDiff) || 0;
-        timeSeries.currentVisMinValue += (chartOptions.scaleSmoothing * minValueDiff) || 1;
+        timeSeries.currentVisMinValue += (chartOptions.scaleSmoothing * minValueDiff) || 0;
       }
     }
 
@@ -894,7 +894,7 @@
           return Util.pixelSnap(unsnapped, lineWidth);
         }.bind(this),
         singleValueToYPosition = function(value, lineWidth, timeSeries) {
-          let offset = value - timeSeries.currentVisMinValue,
+          let offset = value - timeSeries.valueRange.min,
               unsnapped = timeSeries.currentValueRange === 0
                 ? dimensions.height
                 : dimensions.height * (1 - offset / timeSeries.currentValueRange);

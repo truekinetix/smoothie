@@ -12,7 +12,7 @@
         var ts = Date.now();
         var step = (ts/1000 % 15);
         // console.log(step);
-        random1.append(ts, step * Math.random() * 10);
+        random1.append(ts, 180 + step * Math.random() * 10);
         random2.append(ts, step * Math.random() * 10000);
       }, 500);
 
