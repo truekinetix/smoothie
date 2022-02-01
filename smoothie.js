@@ -1096,8 +1096,8 @@
     if (!labelsOptions.disabled && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)) {
       var maxValueString = chartOptions.yMaxFormatter(_valueRange.max, labelsOptions.precision),
           minValueString = chartOptions.yMinFormatter(_valueRange.min, labelsOptions.precision),
-          maxLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(maxValueString).width - 2,
-          minLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(minValueString).width - 2;
+          maxLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(maxValueString).width - 2 : 0,
+          minLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(minValueString).width - 2 : 0;
       context.fillStyle = labelsOptions.fillStyle;
       context.fillText(maxValueString, maxLabelPos, labelsOptions.fontSize);
       context.fillText(minValueString, minLabelPos, dimensions.height - 2);
@@ -1105,8 +1105,8 @@
         let _value2Range = this.seriesSet[1].timeSeries.valueRange;
         let maxValueString = chartOptions.yMaxFormatter(_value2Range.max, chartOptions.labels2.precision ?? labelsOptions.precision),
             minValueString = chartOptions.yMinFormatter(_value2Range.min, chartOptions.labels2.precision ?? labelsOptions.precision);
-            maxLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(maxValueString).width - 2 : 0,
-            minLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(minValueString).width - 2 : 0;
+            maxLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(maxValueString).width - 2,
+            minLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(minValueString).width - 2;
         context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
         context.fillText(maxValueString, maxLabelPos, chartOptions.labels2.fontSize || labelsOptions.fontSize);
         context.fillText(minValueString, minLabelPos, dimensions.height - 2);
@@ -1127,8 +1127,8 @@
             //left of right axis?
             intermediateLabelPos =
               labelsOptions.intermediateLabelSameAxis
-              ? (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2)
-              : (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0);
+              ? (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0)
+              : (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2);
 
         context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
       }
@@ -1142,8 +1142,8 @@
           // opposite axis
           intermediateLabelPos =
               labelsOptions.intermediateLabelSameAxis
-              ? (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0)
-              : (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2);
+              ? (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2)
+              : (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0);
           context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
         }
         context.fillStyle = labelsOptions.fillStyle;
