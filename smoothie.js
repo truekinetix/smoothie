@@ -162,7 +162,7 @@
         // Closest pixel center.
         return Math.floor(position) + 0.5;
       }
-    },
+    }
   };
 
   /**
@@ -863,6 +863,7 @@
         if (!needToRenderInCaseCanvasResized) {
           return;
         }
+      }
     }
 
     // mgtm - without this moved here and changed, crashes in resize with null this.canvas
