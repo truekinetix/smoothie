@@ -1,25 +1,35 @@
-// MIT License:
-//
-// Copyright (c) 2010-2013, Joe Walnes
-//               2013-2018, Drew Noakes
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+;(function(exports) {
+  
+// This smoothie.js version is based on https://github.com/joewalnes/smoothie commit 84df86832c380b486a855cb22411d5e54bf87ff5 on 20180821
+// with changes by MGTM/TK to fix bugs, improve looks and performance, and add striping for subsections
+// and merged with latest github, version 1.36.1, commit a08719f on 20220718
+// 
+
+/**
+ * @license
+ * MIT License:
+ *
+ * Copyright (c) 2010-2013, Joe Walnes
+ *               2013-2018, Drew Noakes
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 /**
  * Smoothie Charts - http://smoothiecharts.org/
@@ -93,17 +103,17 @@
  *        next to value, by @jackdesert (#102)
  *        Fix bug rendering issue in series fill when using scroll backwards, by @olssonfredrik
  *        Add title option, by @mesca
+ * TrueKinetix changes, by MGTM/TK
  *        Fix data drop stoppage by rejecting NaNs in append(), by @timdrysdale
  *        Allow setting interpolation per time series, by @WofWca (#123)
  *        Fix chart constantly jumping in 1-2 pixel steps, by @WofWca (#131)
  *        Fix a memory leak appearing when some `timeSeries.disabled === true`, by @WofWca (#132)
- *        Fix: make all lines sharp, by @WofWca (#134)
+ *        Fix: make all lines sharp, remove the `grid.sharpLines` option by @WofWca (#134)
  *        Improve performance, by @WofWca (#135)
  *        Fix `this.delay` not being respected with `nonRealtimeData: true`, by @WofWca (#137)
  *        Fix series fill & stroke being inconsistent for last data time < render time, by @WofWca (#138)
+ * v1.36.1: Fix a potential XSS when `tooltipLabel` or `strokeStyle` are controlled by users, by @WofWca
  */
-
-;(function(exports) {
 
   // Date.now polyfill
   Date.now = Date.now || function() { return new Date().getTime(); };
@@ -189,8 +199,6 @@
     this.data = [];
     this.maxValue = Number.NaN; // The maximum value ever seen in this TimeSeries.
     this.minValue = Number.NaN; // The minimum value ever seen in this TimeSeries.
-    this.currentValueRange = 1;
-    this.currentVisMinValue = 0;
   };
 
   /**
@@ -228,10 +236,10 @@
    * whether it is replaced, or the values summed (defaults to false.)
    */
   TimeSeries.prototype.append = function(timestamp, value, sumRepeatedTimeStampValues) {
-	// Reject NaN
-	if (isNaN(timestamp) || isNaN(value)){
-		return
-	}
+    // Reject NaN
+    if (isNaN(timestamp) || isNaN(value)){
+      return
+    }  
 
     var lastI = this.data.length - 1;
     if (lastI >= 0) {
@@ -337,11 +345,6 @@
    *     showIntermediateLabels: false,          // shows intermediate labels between min and max values along y axis
    *     intermediateLabelSameAxis: true,
    *   },
-   *   xLabels
-   *   {
-   *     rotateXAxisLabels: false,               // print x-axis labels vertical
-   *     fillStyle: '#ffffff',                   // colour for text of labels, default same as text label
-   *   },
    *   title
    *   {
    *     text: '',                               // the text to display on the left side of the chart
@@ -382,24 +385,32 @@
   /** Formats the HTML string content of the tooltip. */
   SmoothieChart.tooltipFormatter = function (timestamp, data) {
       var timestampFormatter = this.options.timestampFormatter || SmoothieChart.timeFormatter,
-          lines = [timestampFormatter(new Date(timestamp))],
+          // A dummy element to hold children. Maybe there's a better way.
+          elements = document.createElement('div'),
           label;
+      elements.appendChild(document.createTextNode(
+        timestampFormatter(new Date(timestamp))
+      ));
 
       for (var i = 0; i < data.length; ++i) {
         label = data[i].series.options.tooltipLabel || ''
         if (label !== ''){
             label = label + ' ';
         }
-        lines.push('<span style="color:' + data[i].series.options.strokeStyle + '">' +
-        label +
-        this.options.yMaxFormatter(data[i].value, this.options.labels.precision) + '</span>');
+        var dataEl = document.createElement('span');
+        dataEl.style.color = data[i].series.options.strokeStyle;
+        dataEl.appendChild(document.createTextNode(
+          label + this.options.yMaxFormatter(data[i].value, this.options.labels.precision)
+        ));
+        elements.appendChild(document.createElement('br'));
+        elements.appendChild(dataEl);
       }
 
-      return lines.join('<br>');
+      return elements.innerHTML;
   };
 
   SmoothieChart.defaultChartOptions = {
-    millisPerPixel: 20,
+    millisPerPixel: 500, // mgtm performance, orig 20. 60 -> 40sec history   120 ->  80sec -also depends on screen resolution
     enableDpiScaling: true,
     yMinFormatter: function(min, precision) {
       return parseFloat(min).toFixed(precision);
@@ -421,7 +432,7 @@
       fillStyle: '#000000',
       strokeStyle: '#777777',
       lineWidth: 2,
-      millisPerLine: 1000,
+      millisPerLine: 200, // mgtm performance, orig 1000
       verticalSections: 2,
       borderVisible: true
     },
@@ -434,16 +445,12 @@
       showIntermediateLabels: false,
       intermediateLabelSameAxis: true,
     },
-    xLabels: {
-      rotateXAxisLabels: false,
-    },
     title: {
       text: '',
       fillStyle: '#ffffff',
       fontSize: 15,
       fontFamily: 'monospace',
-      verticalAlign: 'middle',
-      horizontalAlign: 'left',
+      verticalAlign: 'middle'
     },
     horizontalLines: [],
     tooltip: false,
@@ -520,13 +527,6 @@
     }
   };
 
-  /**
-   * True if two axes should render independently
-   * @returns bool
-   */
-  SmoothieChart.prototype.doubleAxis = function() {
-    return(this.options.labels2 && this.seriesSet.length == 2);
-  }
   /**
    * Removes the specified <code>TimeSeries</code> from the chart.
    */
@@ -609,8 +609,8 @@
 
   SmoothieChart.prototype.updateTooltip = function () {
     if(!this.options.tooltip){
-     return;
-    }
+      return; 
+    }    
     var el = this.getTooltipEl();
 
     if (!this.mouseover || !this.options.tooltip) {
@@ -642,6 +642,8 @@
     }
 
     if (data.length) {
+      // TODO make `tooltipFormatter` return element(s) instead of an HTML string so it's harder for users
+      // to introduce an XSS. This would be a breaking change.
       el.innerHTML = this.options.tooltipFormatter.call(this, t, data);
       el.style.display = 'block';
     } else {
@@ -656,7 +658,7 @@
     this.mousePageX = evt.pageX;
     this.mousePageY = evt.pageY;
     if(!this.options.tooltip){
-     return;
+      return; 
     }
     var el = this.getTooltipEl();
     el.style.top = Math.round(this.mousePageY) + 'px';
@@ -728,6 +730,10 @@
    * Starts the animation of this chart.
    */
   SmoothieChart.prototype.start = function() {
+
+
+    console.log( "mgtm smoothie" );
+
     if (this.frame) {
       // We're already running, so just return
       return;
@@ -799,20 +805,6 @@
       if (!isNaN(timeSeries.minValue)) {
         chartMinValue = !isNaN(chartMinValue) ? Math.min(chartMinValue, timeSeries.minValue) : timeSeries.minValue;
       }
-      if (this.doubleAxis()) {
-        let valueRange = {min: timeSeries.minValue, max: timeSeries.maxValue};
-        if (this.options.yRangeFunction) {
-          valueRange = this.options.yRangeFunction(valueRange);
-        } else {
-          valueRange.max *= chartOptions.maxValueScale;
-        }
-        let targetValueRange = valueRange.max - valueRange.min;
-        let valueRangeDiff = targetValueRange - (timeSeries.currentValueRange || 0);
-        let minValueDiff = timeSeries.minValue - (timeSeries.currentVisMinValue || 0);
-        timeSeries.valueRange = valueRange;
-        timeSeries.currentValueRange += (chartOptions.scaleSmoothing * valueRangeDiff) || 0;
-        timeSeries.currentVisMinValue += (chartOptions.scaleSmoothing * minValueDiff) || 0;
-      }
     }
 
     // Scale the chartMaxValue to add padding at the top if required
@@ -864,22 +856,37 @@
       // We're not animating. We can use the last render time and the scroll speed to work out whether
       // we actually need to paint anything yet. If not, we can return immediately.
       var sameTime = this.lastChartTimestamp === time;
-      if (sameTime) {
+      if (sameTime) {    
         // Render at least every 1/6th of a second. The canvas may be resized, which there is
         // no reliable way to detect.
         var needToRenderInCaseCanvasResized = nowMillis - this.lastRenderTimeMillis > 1000/6;
         if (!needToRenderInCaseCanvasResized) {
           return;
         }
-      }
     }
+
+    // mgtm - without this moved here and changed, crashes in resize with null this.canvas
+    if ( typeof( canvas ) !== "undefined" ) {
+      this.canvas = canvas;
+    }
+
+    // mgtm also see this.canvas set, but canvas undefined:
+    if ( typeof( canvas ) === "undefined" ) // trap problems
+      canvas = this.canvas;
+
+    canvas = canvas || this.canvas;
+    this.canvas = canvas || this.canvas;
+
+    // resizes this.canvas:
+    this.resize();
+
+    canvas = this.canvas;
+
+    this.updateTooltip();
 
     this.lastRenderTimeMillis = nowMillis;
     this.lastChartTimestamp = time;
 
-    this.resize();
-
-    canvas = canvas || this.canvas;
     var context = canvas.getContext('2d'),
         chartOptions = this.options,
         // Using `this.clientWidth` instead of `canvas.clientWidth` because the latter is slow.
@@ -893,13 +900,6 @@
                 : dimensions.height * (1 - offset / this.currentValueRange);
           return Util.pixelSnap(unsnapped, lineWidth);
         }.bind(this),
-        singleValueToYPosition = function(value, lineWidth, timeSeries) {
-          let offset = value - timeSeries.valueRange.min,
-              unsnapped = timeSeries.currentValueRange === 0
-                ? dimensions.height
-                : dimensions.height * (1 - offset / timeSeries.currentValueRange);
-          return Util.pixelSnap(unsnapped, lineWidth);
-        }.bind(this),
         timeToXPosition = function(t, lineWidth) {
           var unsnapped = chartOptions.scrollBackwards
             ? (time - t) / chartOptions.millisPerPixel
@@ -910,6 +910,10 @@
     this.updateValueRange();
 
     context.font = chartOptions.labels.fontSize + 'px ' + chartOptions.labels.fontFamily;
+
+    // Save the state of the canvas context, any transformations applied in this method
+    // will get removed from the stack at the end of this method when .restore() is called.
+    context.save();
 
     // Move the origin.
     context.translate(dimensions.left, dimensions.top);
@@ -922,13 +926,66 @@
     context.clip();
 
     // Clear the working area.
+    context.save();
     context.fillStyle = chartOptions.grid.fillStyle;
     context.clearRect(0, 0, dimensions.width, dimensions.height);
     context.fillRect(0, 0, dimensions.width, dimensions.height);
+    context.restore();
 
     // Grid lines...
+    context.save();
     context.lineWidth = chartOptions.grid.lineWidth;
     context.strokeStyle = chartOptions.grid.strokeStyle;
+ 
+    // background shaded for subsections
+    for (var d = 0; d < this.seriesSet.length; d++) {
+      context.save();
+      var timeSeries = this.seriesSet[d].timeSeries;
+      if (timeSeries.disabled) {
+        continue;
+      }
+
+      var dataSet = timeSeries.data;
+      var seriesOptions = this.seriesSet[d].options;
+      if ( ( typeof( seriesOptions.arrayTimesSwitchColour ) !== "undefined" ) 
+          && ( seriesOptions.alternateSubsections === "background" ) ) {
+        // draw alternate colours in background when past the given times
+        var xPrev = 0;
+        var iStyle = 0;
+        var timeStart = seriesOptions.arrayTimesSwitchColour[0];
+        for ( var timeSwitch of seriesOptions.arrayTimesSwitchColour ) {
+          if ( iStyle == 0 ) {
+            if ( typeof( seriesOptions.alternateColourBackground0 ) !== "undefined" ) {
+              context.fillStyle = seriesOptions.alternateColourBackground0;
+            } else {
+              context.fillStyle = '#000000';
+            }
+          } else {
+            if ( typeof( seriesOptions.alternateColourBackground1 ) !== "undefined" ) {
+              context.fillStyle = seriesOptions.alternateColourBackground1;
+            } else {
+              context.fillStyle = '#222222';
+            }
+          }
+
+          iStyle = 1-iStyle;
+
+          var xSwitch = Math.round( (timeSwitch-timeStart) / chartOptions.millisPerPixel );
+          //var xSwitch = timeToXPixel(timeSwitch);
+          context.fillRect( xPrev, 0, xSwitch, dimensions.height );
+          xPrev = xSwitch;
+        }                
+          
+      } else {
+        if ( typeof( seriesOptions.alternateColourBackground0 ) !== "undefined" ) {
+          context.fillStyle = seriesOptions.alternateColourBackground0;
+        } else {
+          context.fillStyle = '#000000';
+        }
+        context.fillRect( 0, 0, dimensions.width, dimensions.height );
+      }
+    }
+
     // Vertical (time) dividers.
     if (chartOptions.grid.millisPerLine > 0) {
       context.beginPath();
@@ -958,6 +1015,7 @@
       context.strokeRect(0, 0, dimensions.width, dimensions.height);
       context.closePath();
     }
+    context.restore();
 
     // Draw any horizontal lines...
     if (chartOptions.horizontalLines && chartOptions.horizontalLines.length) {
@@ -965,7 +1023,7 @@
         var line = chartOptions.horizontalLines[hl],
             lineWidth = line.lineWidth || 1,
             hly = valueToYPosition(line.value, lineWidth);
-        context.strokeStyle = line.color || '#ffffff';
+        context.strokeStyle = '#ff0000';
         context.lineWidth = lineWidth;
         context.beginPath();
         context.moveTo(0, hly);
@@ -975,7 +1033,18 @@
       }
     }
 
-    let isTwoAxis = this.doubleAxis();
+    // draw a thicker line for zero y axis
+    if ( chartOptions.grid.bShowZeroLine ) {
+        var yZero = valueToYPixel( 0 );
+        context.strokeStyle = "#ffffff";
+        context.lineWidth = chartOptions.grid.lineWidth*3;
+        context.beginPath();
+        context.moveTo( 0, yZero );
+        context.lineTo( dimensions.width, yZero );
+        context.stroke();
+        context.closePath();
+    }
+
     // For each data set...
     for (var d = 0; d < this.seriesSet.length; d++) {
       var timeSeries = this.seriesSet[d].timeSeries,
@@ -984,29 +1053,105 @@
       // Delete old data that's moved off the left of the chart.
       timeSeries.dropOldData(oldestValidTime, chartOptions.maxDataSetLength);
       if (dataSet.length <= 1 || timeSeries.disabled) {
-          continue;
+        continue;
       }
+      context.save();
 
       var seriesOptions = this.seriesSet[d].options,
           // Keep in mind that `context.lineWidth = 0` doesn't actually set it to `0`.
-          drawStroke = seriesOptions.strokeStyle && seriesOptions.strokeStyle !== 'none',
+          //drawStroke = seriesOptions.strokeStyle && seriesOptions.strokeStyle !== 'none',
+drawStroke = '#00ff00';
+
           lineWidthMaybeZero = drawStroke ? seriesOptions.lineWidth : 0;
+      
+      // mgtm - 
+      var indexTimeSwitchColour = undefined;
+      var timeSwitchColour = undefined;
+      if ( typeof( seriesOptions.arrayTimesSwitchColour ) !== "undefined" ) {
+        if ( seriesOptions.alternateSubsections === "line" ) {
+            // set up for alternate colours in line when past the given times
+            indexTimeSwitchColour = 0;
+            timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
+        } 
+      }
 
       // Draw the line...
       context.beginPath();
       // Retain lastX, lastY for calculating the control points of bezier curves.
       var firstX = timeToXPosition(dataSet[0][0], lineWidthMaybeZero),
-        // scale per dataset if two traces
-        firstY = (isTwoAxis) ? singleValueToYPosition(dataSet[0][1], lineWidthMaybeZero, timeSeries) : valueToYPosition(dataSet[0][1], lineWidthMaybeZero),
+        firstY = valueToYPosition(dataSet[0][1], lineWidthMaybeZero),
         lastX = firstX,
         lastY = firstY,
         draw;
       context.moveTo(firstX, firstY);
+
+      var timePt = dataSet[i][0];
+      var valuePt = dataSet[i][1];
+      var x = timeToXPixel(timePt);
+      var y = valueToYPixel(valuePt);
+
+      // mgtm move line on bottom just off bottom
+      if ( y == dimensions.height ) { 
+          y -= 2;
+      };
+
+      // mgtm - alternate colours in line when past the given times
+      if ( ( chartOptions.alternateSubsections === "line" ) && ( typeof(timeSwitchColour) !== "undefined" ) ) {
+        if ( dataSet[i][0] >= timeSwitchColour ) {
+
+          if ( typeof(lastX) !== "undefined" )
+              context.lineTo(x,y);
+
+          context.stroke();
+          context.closePath();
+
+
+          // alternate colours
+          if ( indexTimeSwitchColour % 2 == 0 ) {
+            context.lineWidth = seriesOptions.lineWidth;
+            context.strokeStyle = seriesOptions.strokeStyleAlternate;
+          } else {
+            context.lineWidth = seriesOptions.lineWidth;
+            context.strokeStyle = seriesOptions.strokeStyle;
+          }
+          context.beginPath();
+
+          if ( typeof(lastX) === "undefined" )
+              context.moveTo(x, y);
+          else
+              context.moveTo(lastX, lastY);
+
+          indexTimeSwitchColour += 1;
+          timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
+        }
+      }
+
       switch (seriesOptions.interpolation || chartOptions.interpolation) {
         case "linear":
         case "line": {
           draw = function(x, y, lastX, lastY) {
             context.lineTo(x,y);
+
+            // mark the point
+            if ( ( typeof( seriesOptions.bMarkPoints ) !== "undefined" ) && seriesOptions.bMarkPoints ) {
+              // close line path
+              context.stroke();
+              context.closePath();
+
+              context.beginPath();
+              var radiusMark = 4;
+              context.arc(x, y, radiusMark, 0, 2 * Math.PI, true);
+              context.stroke();
+              context.closePath();
+
+              // restore line path
+              context.lineWidth = seriesOptions.lineWidth;
+              context.strokeStyle = seriesOptions.strokeStyle;
+
+context.strokeStyle = '#00ff00';
+
+              context.moveTo(x,y);
+            }
           }
           break;
         }
@@ -1036,17 +1181,17 @@
         }
         case "step": {
           draw = function(x, y, lastX, lastY) {
-            context.lineTo(x,lastY);
-            context.lineTo(x,y);
+          context.lineTo(x,lastY);
+          context.lineTo(x,y);
           }
           break;
         }
-      }
+      }    
 
       for (var i = 1; i < dataSet.length; i++) {
         var iThData = dataSet[i],
             x = timeToXPosition(iThData[0], lineWidthMaybeZero),
-            y = (isTwoAxis) ? singleValueToYPosition(iThData[1], lineWidthMaybeZero, timeSeries) : valueToYPosition(iThData[1], lineWidthMaybeZero);
+            y = valueToYPosition(iThData[1], lineWidthMaybeZero);
         draw(x, y, lastX, lastY);
         lastX = x; lastY = y;
       }
@@ -1054,9 +1199,12 @@
       if (drawStroke) {
         context.lineWidth = seriesOptions.lineWidth;
         context.strokeStyle = seriesOptions.strokeStyle;
+
+context.strokeStyle = '#00ffff';
+
         context.stroke();
       }
-
+    
       if (seriesOptions.fillStyle) {
         // Close up the fill region.
         context.lineTo(lastX, dimensions.height + lineWidthMaybeZero + 1);
@@ -1065,7 +1213,87 @@
         context.fillStyle = seriesOptions.fillStyle;
         context.fill();
       }
-    }
+
+      if ( chartOptions.targetPower > 0 ){
+        context.lineWidth = chartOptions.grid.lineWidth*4;
+        ypower = valueToYPixel(chartOptions.targetPower )
+        context.strokeStyle = seriesOptions.strokeStyle;
+        context.beginPath();
+        context.moveTo( 0, ypower );
+        context.lineTo( dimensions.width, ypower );
+        context.stroke();
+        context.closePath();
+
+        context.font = "25px Arial";
+        context.textAlign = "right";
+        context.fillStyle = seriesOptions.strokeStyle;;
+        context.fillText("Target: " + chartOptions.targetPower + " W", dimensions.width - 5 ,ypower - 5);
+      
+        context.fillStyle = seriesOptions.fillStyle;
+        context.fill();
+      }
+
+      if ( chartOptions.maxHrZone > 0 && chartOptions.mediumHrZone > 0 && chartOptions.easyHrZone > 0 ) {
+        var yEasy = valueToYPixel(chartOptions.easyHrZone);
+        var yMedium = valueToYPixel(chartOptions.mediumHrZone);
+        var yMax = valueToYPixel(chartOptions.maxHrZone);
+    
+        context.lineWidth = chartOptions.grid.lineWidth*5;
+        // context.strokeStyle = "rgba(164, 255, 36, 0.58)";
+        context.strokeStyle = seriesOptions.strokeStyle;
+        context.beginPath();
+        context.moveTo( 0, yEasy );
+        context.lineTo( dimensions.width, yEasy );
+        context.stroke();
+        context.closePath();
+        
+        
+        context.font = "25px Arial";
+        context.textAlign = "right";
+        context.fillStyle = seriesOptions.strokeStyle;
+        context.fillText("60%", dimensions.width - 5 ,yEasy - 5);
+  
+        // context.strokeStyle = "rgba(255, 218, 36, 0.65)";
+        context.strokeStyle = seriesOptions.strokeStyle;
+        context.beginPath();
+        context.moveTo( 0, yMedium );
+        context.lineTo( dimensions.width, yMedium );
+        context.stroke();
+        context.closePath();
+  
+        context.fillStyle = seriesOptions.strokeStyle;
+        context.fillText("80%", dimensions.width - 5 ,yMedium - 5);
+  
+        // context.strokeStyle = "rgba(255, 72, 36, 0.59)";
+        context.strokeStyle = seriesOptions.strokeStyle;
+        context.beginPath();
+        context.moveTo( 0, yMax );
+        context.lineTo( dimensions.width, yMax );
+        context.stroke();
+        context.closePath();
+        
+        context.fillStyle = seriesOptions.strokeStyle;
+        context.fillText("100%", dimensions.width - 5 , yMax - 5);
+        
+        // set back to normal so the y axis labels are displayed correctly
+        context.textAlign = "left";
+        // var ytest = valueToYPixel( chartOptions.maxHrZone );
+        // context.strokeStyle = "#ffffff";
+        // context.lineWidth = 0;
+        // context.beginPath();
+        // context.moveTo( 0, ytest );
+        // context.lineTo( dimensions.width, ytest );
+        // context.lineTo( dimensions.width, ytest + 30);
+        // context.lineTo( 0, ytest + 30 );
+        // context.stroke();
+        // context.closePath();
+        
+        context.fillStyle = seriesOptions.fillStyle;
+        context.fill();
+      }
+
+      context.restore();
+    } // for each dataset
 
     if (chartOptions.tooltip && this.mouseX >= 0) {
       // Draw vertical bar to show tooltip position
@@ -1078,136 +1306,102 @@
       context.stroke();
     }
     this.updateTooltip();
-
+    
     var labelsOptions = chartOptions.labels;
     // Draw the axis values on the chart.
-    let _valueRange = (isTwoAxis) ? this.seriesSet[0].timeSeries.valueRange : this.valueRange;
-    if (!labelsOptions.disabled && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)) {
-      var maxValueString = chartOptions.yMaxFormatter(_valueRange.max, labelsOptions.precision),
-          minValueString = chartOptions.yMinFormatter(_valueRange.min, labelsOptions.precision),
-          maxLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(maxValueString).width - 2 : 0,
-          minLabelPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(minValueString).width - 2 : 0;
+    if (!labelsOptions.disabled && !isNaN(this.valueRange.min) && !isNaN(this.valueRange.max)) {
+      var maxValueString = chartOptions.yMaxFormatter(this.valueRange.max, labelsOptions.precision),
+          minValueString = chartOptions.yMinFormatter(this.valueRange.min, labelsOptions.precision),
+          maxLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(maxValueString).width - 2,
+          minLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(minValueString).width - 2;
       context.fillStyle = labelsOptions.fillStyle;
       context.fillText(maxValueString, maxLabelPos, labelsOptions.fontSize);
       context.fillText(minValueString, minLabelPos, dimensions.height - 2);
-      if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
-        let _value2Range = this.seriesSet[1].timeSeries.valueRange;
-        let maxValueString = chartOptions.yMaxFormatter(_value2Range.max, chartOptions.labels2.precision ?? labelsOptions.precision),
-            minValueString = chartOptions.yMinFormatter(_value2Range.min, chartOptions.labels2.precision ?? labelsOptions.precision);
-            maxLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(maxValueString).width - 2,
-            minLabelPos = chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(minValueString).width - 2;
-        context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
-        context.fillText(maxValueString, maxLabelPos, chartOptions.labels2.fontSize || labelsOptions.fontSize);
-        context.fillText(minValueString, minLabelPos, dimensions.height - 2);
-        context.fillStyle = labelsOptions.fillStyle;
-      }
     }
 
     // Display intermediate y axis labels along y-axis to the left of the chart
     if ( labelsOptions.showIntermediateLabels
-          && !isNaN(_valueRange.min) && !isNaN(_valueRange.max)
+          && !isNaN(this.valueRange.min) && !isNaN(this.valueRange.max)
           && chartOptions.grid.verticalSections > 0) {
       // show a label above every vertical section divider
-      var step = (_valueRange.max - _valueRange.min) / chartOptions.grid.verticalSections;
+      var step = (this.valueRange.max - this.valueRange.min) / chartOptions.grid.verticalSections;
       var stepPixels = dimensions.height / chartOptions.grid.verticalSections;
       for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
         var gy = dimensions.height - Math.round(v * stepPixels),
-            yValue = chartOptions.yIntermediateFormatter(_valueRange.min + (v * step), labelsOptions.precision),
+            yValue = chartOptions.yIntermediateFormatter(this.valueRange.min + (v * step), labelsOptions.precision),
             //left of right axis?
             intermediateLabelPos =
               labelsOptions.intermediateLabelSameAxis
-              ? (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0)
-              : (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2);
-
-        context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
-      }
-      if (isTwoAxis && !isNaN(this.seriesSet[1].timeSeries.maxValue)) {
-        var step = (this.seriesSet[1].timeSeries.valueRange.max - this.seriesSet[1].timeSeries.valueRange.min) / chartOptions.grid.verticalSections;
-        var stepPixels = dimensions.height / chartOptions.grid.verticalSections;
-        context.fillStyle = chartOptions.labels2.fillStyle || labelsOptions.fillStyle;
-        for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
-          var gy = dimensions.height - Math.round(v * stepPixels),
-              yValue = chartOptions.yIntermediateFormatter(this.seriesSet[1].timeSeries.valueRange.min + (v * step), chartOptions.labels2.precision ?? labelsOptions.precision);
-          // opposite axis
-          intermediateLabelPos =
-              labelsOptions.intermediateLabelSameAxis
               ? (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2)
               : (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0);
-          context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
-        }
-        context.fillStyle = labelsOptions.fillStyle;
+
+        context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
       }
     }
 
     // Display timestamps along x-axis at the bottom of the chart.
-    if (chartOptions.timestampFormatter && chartOptions.grid.millisPerLine > 0) {
-      var textUntilX;
-      if (chartOptions.xLabels.rotateXAxisLabels) {
-        textUntilX = chartOptions.scrollBackwards
-          ? context.measureText('M').width
-          : dimensions.width - context.measureText('M').width; + 4;
-      } else {
-        textUntilX = chartOptions.scrollBackwards
-          ? context.measureText(minValueString).width
-          : dimensions.width - context.measureText(minValueString).width + 4;
-      }
+    if (chartOptions.timestampFormatter && chartOptions.grid.millisPerLine > 0) {    
+      var textUntilX = chartOptions.scrollBackwards
+        ? context.measureText(minValueString).width
+        : dimensions.width - context.measureText(minValueString).width + 4;      
       for (var t = time - (time % chartOptions.grid.millisPerLine);
            t >= oldestValidTime;
            t -= chartOptions.grid.millisPerLine) {
         var gx = timeToXPosition(t, 0);
         // Only draw the timestamp if it won't overlap with the previously drawn one.
-        if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  {
-          if (chartOptions.xLabels.rotateXAxisLabels) {
-            // draw x axis labels rotated
+        //if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  
+        {
+          if ( ( typeof( chartOptions.labels.bRotateXAxisLabels ) !== "undefined" ) && chartOptions.labels.bRotateXAxisLabels ) {
+            // mgtm draw x axis labels rotated
             context.save();
             context.translate(gx - tsWidth, dimensions.height - 2);
-            context.rotate(-0.5*Math.PI);
+context.rotate(-0.2*Math.PI);
+//context.rotate(-0.5*Math.PI);
           }
           // Formats the timestamp based on user specified formatting function
           // SmoothieChart.timeFormatter function above is one such formatting option
-          var tx = new Date(t),
-            ts = chartOptions.timestampFormatter(tx),
-            tsWidth = chartOptions.xLabels.rotateXAxisLabels ? context.measureText('M').width : context.measureText(ts).width;
+          var tx = new Date(t);
+          var ts = tx;
+          if ( chartOptions.timestampFormatter && chartOptions.timestampFormatterMillis )
+            ts = ( chartOptions.grid.millisPerLine > 1000 ) ? chartOptions.timestampFormatter(tx) : chartOptions.timestampFormatterMillis(tx, t);
+          else if ( chartOptions.timestampFormatter )
+            ts = chartOptions.timestampFormatter(tx);
+          var tsWidth = context.measureText(ts).width;
+
+
+ts = "hello";
 
           textUntilX = chartOptions.scrollBackwards
             ? gx + tsWidth + 2
             : gx - tsWidth - 2;
 
-          context.fillStyle = chartOptions.xLabels.fillStyle ?? chartOptions.labels.fillStyle;
-          if (chartOptions.xLabels.rotateXAxisLabels) {
+          context.fillStyle = chartOptions.labels.fillStyle;
+          if ( ( typeof( chartOptions.labels.bRotateXAxisLabels ) !== "undefined" ) && chartOptions.labels.bRotateXAxisLabels ) {
             if(chartOptions.scrollBackwards) {
-              context.fillText(ts, 0, tsWidth);
+              context.fillText(ts, gx, tsWidth);
             } else {
               context.fillText(ts, 0, tsWidth);
             }
+
             context.restore();
-          } else if(chartOptions.scrollBackwards) {
-            context.fillText(ts, gx, dimensions.height - 2);
           } else {
-            context.fillText(ts, gx - tsWidth, dimensions.height - 2);
+            if(chartOptions.scrollBackwards) {
+              context.fillText(ts, gx, dimensions.height - 2);
+            } else {
+              context.fillText(ts, gx - tsWidth, dimensions.height - 2);
+            }             
           }
         }
       }
     }
 
     // Display title.
+
+chartOptions.title.text = "hello";
+
     if (chartOptions.title.text !== '') {
       context.font = chartOptions.title.fontSize + 'px ' + chartOptions.title.fontFamily;
-      let xAlign = chartOptions.title.horizontalAlign || ((chartOptions.scrollBackwards) ? 'right' : 'left');
-      let titleXPos;
-      switch (xAlign) {
-        case 'right':
-          titleXPos = dimensions.width - context.measureText(chartOptions.title.text).width - 2;
-          break;
-        case 'center':
-          titleXPos = (dimensions.width - context.measureText(chartOptions.title.text).width) / 2;
-          break;
-        case 'left':
-        default:
-          titleXPos = 2;
-          break;
-      }
-      // var titleXPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(chartOptions.title.text).width - 2 : 2;
+      var titleXPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(chartOptions.title.text).width - 2 : 2;
       if (chartOptions.title.verticalAlign == 'bottom') {
         context.textBaseline = 'bottom';
         var titleYPos = dimensions.height;
@@ -1221,16 +1415,31 @@
       context.fillStyle = chartOptions.title.fillStyle;
       context.fillText(chartOptions.title.text, titleXPos, titleYPos);
     }
+
+    context.restore(); // See .save() above.
   };
+
+  function pad2(number) { return (number < 10 ? '0' : '') + number; }
+  function pad3(number) { return (number < 100 ? '0' : '') + pad2(number); }
 
   // Sample timestamp formatting function
   SmoothieChart.timeFormatter = function(date) {
-    function pad2(number) { return (number < 10 ? '0' : '') + number }
     return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
+  };
+
+    // Sample timestamp formatting function
+    SmoothieChart.timeFormatter = function(date) {
+      function pad2(number) { return (number < 10 ? '0' : '') + number }
+      return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
+    };
+
+  // Sample timestamp formatting function
+  SmoothieChart.timeFormatterMillis = function( date, dateInFloatSeconds ) {
+    var millis = Math.floor( dateInFloatSeconds * 1000 ) % 1000;
+    return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds() + "." + pad3(millis));
   };
 
   exports.TimeSeries = TimeSeries;
   exports.SmoothieChart = SmoothieChart;
 
 })(typeof exports === 'undefined' ? this : exports);
-
