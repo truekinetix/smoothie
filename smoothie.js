@@ -731,8 +731,7 @@
    */
   SmoothieChart.prototype.start = function() {
 
-
-    console.log( "mgtm smoothie" );
+    console.log( "TK Smoothie 20221010" );
 
     if (this.frame) {
       // We're already running, so just return
@@ -746,21 +745,23 @@
     var animate = function() {
       this.frame = SmoothieChart.AnimateCompatibility.requestAnimationFrame(function() {
         if(this.options.nonRealtimeData){
-           var dateZero = new Date(0);
-           // find the data point with the latest timestamp
-           var maxTimeStamp = this.seriesSet.reduce(function(max, series){
-             var dataSet = series.timeSeries.data;
-             var indexToCheck = Math.round(this.options.displayDataFromPercentile * dataSet.length) - 1;
-             indexToCheck = indexToCheck >= 0 ? indexToCheck : 0;
-             indexToCheck = indexToCheck <= dataSet.length -1 ? indexToCheck : dataSet.length -1;
-             if(dataSet && dataSet.length > 0)
-             {
-              // timestamp corresponds to element 0 of the data point
-              var lastDataTimeStamp = dataSet[indexToCheck][0];
-              max = max > lastDataTimeStamp ? max : lastDataTimeStamp;
-             }
-             return max;
-          }.bind(this), dateZero);
+            var dateZero = new Date(0);
+            // find the data point with the latest timestamp
+            var maxTimeStamp = this.seriesSet.reduce(
+              function(max, series) {
+                var dataSet = series.timeSeries.data;
+                var indexToCheck = Math.round(this.options.displayDataFromPercentile * dataSet.length) - 1 ;
+                indexToCheck = ( indexToCheck >= 0 ) ? indexToCheck : 0;
+                indexToCheck = ( indexToCheck <= dataSet.length - 1 ) ? indexToCheck : ( dataSet.length - 1 );
+                if(dataSet && dataSet.length > 0) {
+                  // timestamp corresponds to element 0 of the data point
+                  var lastDataTimeStamp = dataSet[indexToCheck][0];
+                  max = max > lastDataTimeStamp ? max : lastDataTimeStamp;
+                }
+                return max;
+              }.bind(this), 
+              dateZero
+            );
           // use the max timestamp as current time
           this.render(this.canvas, maxTimeStamp > dateZero ? maxTimeStamp : null);
         } else {
@@ -859,7 +860,9 @@
       if (sameTime) {    
         // Render at least every 1/6th of a second. The canvas may be resized, which there is
         // no reliable way to detect.
-        var needToRenderInCaseCanvasResized = nowMillis - this.lastRenderTimeMillis > 1000/6;
+
+        var millisPeriod = 1000/6;
+        var needToRenderInCaseCanvasResized = nowMillis - this.lastRenderTimeMillis > millisPeriod;
         if (!needToRenderInCaseCanvasResized) {
           return;
         }
@@ -893,20 +896,20 @@
         // Using `this.clientWidth` instead of `canvas.clientWidth` because the latter is slow.
         dimensions = { top: 0, left: 0, width: this.clientWidth, height: this.clientHeight },
         // Calculate the threshold time for the oldest data points.
-        oldestValidTime = time - (dimensions.width * chartOptions.millisPerPixel),
-        valueToYPosition = function(value, lineWidth) {
-          var offset = value - this.currentVisMinValue,
-              unsnapped = this.currentValueRange === 0
-                ? dimensions.height
-                : dimensions.height * (1 - offset / this.currentValueRange);
-          return Util.pixelSnap(unsnapped, lineWidth);
-        }.bind(this),
-        timeToXPosition = function(t, lineWidth) {
-          var unsnapped = chartOptions.scrollBackwards
-            ? (time - t) / chartOptions.millisPerPixel
-            : dimensions.width - ((time - t) / chartOptions.millisPerPixel);
-          return Util.pixelSnap(unsnapped, lineWidth);
-        };
+        oldestValidTime = time - (dimensions.width * chartOptions.millisPerPixel);
+
+    var valueToYPosition = function(value, lineWidth) {
+      var offset = value - this.currentVisMinValue,
+          unsnapped = this.currentValueRange === 0
+            ? dimensions.height
+            : dimensions.height * (1 - offset / this.currentValueRange);
+      return Util.pixelSnap(unsnapped, lineWidth);
+    }.bind(this), timeToXPosition = function(t, lineWidth) {
+      var unsnapped = chartOptions.scrollBackwards
+          ? (time - t) / chartOptions.millisPerPixel
+          : dimensions.width - ((time - t) / chartOptions.millisPerPixel);
+      return Util.pixelSnap(unsnapped, lineWidth);
+    };
 
     this.updateValueRange();
 
@@ -938,32 +941,33 @@
     context.lineWidth = chartOptions.grid.lineWidth;
     context.strokeStyle = chartOptions.grid.strokeStyle;
  
+/*
     // background shaded for subsections
-    for (var d = 0; d < this.seriesSet.length; d++) {
+    for (var iSeriesSet = 0; iSeriesSet < this.seriesSet.length; iSeriesSet++) {
       context.save();
-      var timeSeries = this.seriesSet[d].timeSeries;
-      if (timeSeries.disabled) {
+      var timeSeriesLocal = this.seriesSet[iSeriesSet].timeSeries;
+      if (timeSeriesLocal.disabled) {
         continue;
       }
 
-      var dataSet = timeSeries.data;
-      var seriesOptions = this.seriesSet[d].options;
-      if ( ( typeof( seriesOptions.arrayTimesSwitchColour ) !== "undefined" ) 
-          && ( seriesOptions.alternateSubsections === "background" ) ) {
+      //var dataSet = timeSeriesLocal.data;
+      var seriesOptions1 = this.seriesSet[iSeriesSet].options;
+      if ( ( typeof( seriesOptions1.arrayTimesSwitchColour ) !== "undefined" ) 
+          && ( seriesOptions1.alternateSubsections === "background" ) ) {
         // draw alternate colours in background when past the given times
         var xPrev = 0;
         var iStyle = 0;
-        var timeStart = seriesOptions.arrayTimesSwitchColour[0];
-        for ( var timeSwitch of seriesOptions.arrayTimesSwitchColour ) {
+        var timeStart = seriesOptions1.arrayTimesSwitchColour[0];
+        for ( var timeSwitch of seriesOptions1.arrayTimesSwitchColour ) {
           if ( iStyle == 0 ) {
-            if ( typeof( seriesOptions.alternateColourBackground0 ) !== "undefined" ) {
-              context.fillStyle = seriesOptions.alternateColourBackground0;
+            if ( typeof( seriesOptions1.alternateColourBackground0 ) !== "undefined" ) {
+              context.fillStyle = seriesOptions1.alternateColourBackground0;
             } else {
               context.fillStyle = '#000000';
             }
           } else {
-            if ( typeof( seriesOptions.alternateColourBackground1 ) !== "undefined" ) {
-              context.fillStyle = seriesOptions.alternateColourBackground1;
+            if ( typeof( seriesOptions1.alternateColourBackground1 ) !== "undefined" ) {
+              context.fillStyle = seriesOptions1.alternateColourBackground1;
             } else {
               context.fillStyle = '#222222';
             }
@@ -972,20 +976,21 @@
           iStyle = 1-iStyle;
 
           var xSwitch = Math.round( (timeSwitch-timeStart) / chartOptions.millisPerPixel );
-          //var xSwitch = timeToXPixel(timeSwitch);
+          //var xSwitch = timeToXPosition(timeSwitch);
           context.fillRect( xPrev, 0, xSwitch, dimensions.height );
           xPrev = xSwitch;
         }                
           
       } else {
-        if ( typeof( seriesOptions.alternateColourBackground0 ) !== "undefined" ) {
-          context.fillStyle = seriesOptions.alternateColourBackground0;
+        if ( typeof( seriesOptions1.alternateColourBackground0 ) !== "undefined" ) {
+          context.fillStyle = seriesOptions1.alternateColourBackground0;
         } else {
           context.fillStyle = '#000000';
         }
         context.fillRect( 0, 0, dimensions.width, dimensions.height );
       }
     }
+*/
 
     // Vertical (time) dividers.
     if (chartOptions.grid.millisPerLine > 0) {
@@ -993,23 +998,24 @@
       for (var t = time - (time % chartOptions.grid.millisPerLine);
            t >= oldestValidTime;
            t -= chartOptions.grid.millisPerLine) {
-        var gx = timeToXPosition(t, chartOptions.grid.lineWidth);
-        context.moveTo(gx, 0);
-        context.lineTo(gx, dimensions.height);
+        var gx1 = timeToXPosition(t, chartOptions.grid.lineWidth);
+        context.moveTo(gx1, 0);
+        context.lineTo(gx1, dimensions.height);
       }
       context.stroke();
       context.closePath();
     }
 
     // Horizontal (value) dividers.
-    for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
-      var gy = Util.pixelSnap(v * dimensions.height / chartOptions.grid.verticalSections, chartOptions.grid.lineWidth);
+    for (var iVerticalSection = 1; iVerticalSection < chartOptions.grid.verticalSections; iVerticalSection++) {
+      var gy = Util.pixelSnap(iVerticalSection * dimensions.height / chartOptions.grid.verticalSections, chartOptions.grid.lineWidth);
       context.beginPath();
       context.moveTo(0, gy);
       context.lineTo(dimensions.width, gy);
       context.stroke();
       context.closePath();
     }
+
     // Bounding rectangle.
     if (chartOptions.grid.borderVisible) {
       context.beginPath();
@@ -1024,7 +1030,7 @@
         var line = chartOptions.horizontalLines[hl],
             lineWidth = line.lineWidth || 1,
             hly = valueToYPosition(line.value, lineWidth);
-        context.strokeStyle = '#ff0000';
+        context.strokeStyle = line.color || '#ffffff';
         context.lineWidth = lineWidth;
         context.beginPath();
         context.moveTo(0, hly);
@@ -1036,35 +1042,37 @@
 
     // draw a thicker line for zero y axis
     if ( chartOptions.grid.bShowZeroLine ) {
-        var yZero = valueToYPixel( 0 );
-        context.strokeStyle = "#ffffff";
-        context.lineWidth = chartOptions.grid.lineWidth*3;
-        context.beginPath();
-        context.moveTo( 0, yZero );
-        context.lineTo( dimensions.width, yZero );
-        context.stroke();
-        context.closePath();
+      var yZero = valueToYPosition( 0 );
+      context.strokeStyle = "#ffffff";
+      context.lineWidth = chartOptions.grid.lineWidth*3;
+      context.beginPath();
+      context.moveTo( 0, yZero );
+      context.lineTo( dimensions.width, yZero );
+      context.stroke();
+      context.closePath();
     }
 
     // For each data set...
-    for (var d = 0; d < this.seriesSet.length; d++) {
-      var timeSeries = this.seriesSet[d].timeSeries,
-          dataSet = timeSeries.data;
+    for (var iSeriesSet1 = 0; iSeriesSet1 < this.seriesSet.length; iSeriesSet1++) {
+      var timeSeriesLocal1 = this.seriesSet[iSeriesSet1].timeSeries;
+      var dataSet1 = timeSeriesLocal1.data;
 
       // Delete old data that's moved off the left of the chart.
-      timeSeries.dropOldData(oldestValidTime, chartOptions.maxDataSetLength);
-      if (dataSet.length <= 1 || timeSeries.disabled) {
+      timeSeriesLocal1.dropOldData(oldestValidTime, chartOptions.maxDataSetLength);
+      if (dataSet1.length <= 1 || timeSeriesLocal1.disabled) {
         continue;
       }
       context.save();
 
-      var seriesOptions = this.seriesSet[d].options,
-          // Keep in mind that `context.lineWidth = 0` doesn't actually set it to `0`.
-          //drawStroke = seriesOptions.strokeStyle && seriesOptions.strokeStyle !== 'none',
-drawStroke = '#00ff00';
+      var seriesOptions = this.seriesSet[iSeriesSet1].options;
 
-          lineWidthMaybeZero = drawStroke ? seriesOptions.lineWidth : 0;
-      
+      //drawStroke = seriesOptions.strokeStyle && seriesOptions.strokeStyle !== 'none',
+      var drawStroke = seriesOptions.strokeStyle && seriesOptions.strokeStyle !== 'none';
+
+      // Keep in mind that `context.lineWidth = 0` doesn't actually set it to `0`.
+      var lineWidthMaybeZero = drawStroke ? seriesOptions.lineWidth : 0;
+  
+/*      
       // mgtm - 
       var indexTimeSwitchColour = undefined;
       var timeSwitchColour = undefined;
@@ -1075,30 +1083,33 @@ drawStroke = '#00ff00';
             timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
         } 
       }
+*/
 
       // Draw the line...
       context.beginPath();
+
       // Retain lastX, lastY for calculating the control points of bezier curves.
-      var firstX = timeToXPosition(dataSet[0][0], lineWidthMaybeZero),
-        firstY = valueToYPosition(dataSet[0][1], lineWidthMaybeZero),
+      var firstX = timeToXPosition(dataSet1[0][0], lineWidthMaybeZero),
+        firstY = valueToYPosition(dataSet1[0][1], lineWidthMaybeZero),
         lastX = firstX,
         lastY = firstY,
         draw;
       context.moveTo(firstX, firstY);
 
-      var timePt = dataSet[i][0];
-      var valuePt = dataSet[i][1];
-      var x = timeToXPixel(timePt);
-      var y = valueToYPixel(valuePt);
+/*
+      var timePt = dataSet1[i][0];
+      var valuePt = dataSet1[i][1];
+      var x = timeToXPosition(timePt);
+      var y = valueToYPosition(valuePt);
 
       // mgtm move line on bottom just off bottom
       if ( y == dimensions.height ) { 
           y -= 2;
-      };
+      }
 
       // mgtm - alternate colours in line when past the given times
       if ( ( chartOptions.alternateSubsections === "line" ) && ( typeof(timeSwitchColour) !== "undefined" ) ) {
-        if ( dataSet[i][0] >= timeSwitchColour ) {
+        if ( dataSet1[i][0] >= timeSwitchColour ) {
 
           if ( typeof(lastX) !== "undefined" )
               context.lineTo(x,y);
@@ -1126,6 +1137,7 @@ drawStroke = '#00ff00';
           timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
         }
       }
+*/
 
       switch (seriesOptions.interpolation || chartOptions.interpolation) {
         case "linear":
@@ -1149,11 +1161,9 @@ drawStroke = '#00ff00';
               context.lineWidth = seriesOptions.lineWidth;
               context.strokeStyle = seriesOptions.strokeStyle;
 
-context.strokeStyle = '#00ff00';
-
               context.moveTo(x,y);
             }
-          }
+          };
           break;
         }
         case "bezier":
@@ -1177,31 +1187,30 @@ context.strokeStyle = '#00ff00';
               Math.round((lastX + x) / 2), lastY, // controlPoint1 (P)
               Math.round((lastX + x)) / 2, y, // controlPoint2 (Q)
               x, y); // endPoint (B)
-          }
+          };
           break;
         }
         case "step": {
           draw = function(x, y, lastX, lastY) {
           context.lineTo(x,lastY);
           context.lineTo(x,y);
-          }
+          };
           break;
         }
       }    
 
-      for (var i = 1; i < dataSet.length; i++) {
-        var iThData = dataSet[i],
-            x = timeToXPosition(iThData[0], lineWidthMaybeZero),
-            y = valueToYPosition(iThData[1], lineWidthMaybeZero);
-        draw(x, y, lastX, lastY);
-        lastX = x; lastY = y;
+      for (var i = 1; i < dataSet1.length; i++) {
+        var iThData = dataSet1[i];
+        var x1 = timeToXPosition(iThData[0], lineWidthMaybeZero);
+        var y1 = valueToYPosition(iThData[1], lineWidthMaybeZero);
+        draw(x1, y1, lastX, lastY);
+        lastX = x1; 
+        lastY = y1;
       }
 
       if (drawStroke) {
         context.lineWidth = seriesOptions.lineWidth;
         context.strokeStyle = seriesOptions.strokeStyle;
-
-context.strokeStyle = '#00ffff';
 
         context.stroke();
       }
@@ -1215,10 +1224,12 @@ context.strokeStyle = '#00ffff';
         context.fill();
       }
 
+/*
       if ( chartOptions.targetPower > 0 ){
         context.lineWidth = chartOptions.grid.lineWidth*4;
-        ypower = valueToYPixel(chartOptions.targetPower )
+        var ypower = valueToYPosition(chartOptions.targetPower )
         context.strokeStyle = seriesOptions.strokeStyle;
+
         context.beginPath();
         context.moveTo( 0, ypower );
         context.lineTo( dimensions.width, ypower );
@@ -1227,17 +1238,16 @@ context.strokeStyle = '#00ffff';
 
         context.font = "25px Arial";
         context.textAlign = "right";
-        context.fillStyle = seriesOptions.strokeStyle;;
+        context.fillStyle = seriesOptions.strokeStyle;
         context.fillText("Target: " + chartOptions.targetPower + " W", dimensions.width - 5 ,ypower - 5);
-      
         context.fillStyle = seriesOptions.fillStyle;
         context.fill();
       }
 
       if ( chartOptions.maxHrZone > 0 && chartOptions.mediumHrZone > 0 && chartOptions.easyHrZone > 0 ) {
-        var yEasy = valueToYPixel(chartOptions.easyHrZone);
-        var yMedium = valueToYPixel(chartOptions.mediumHrZone);
-        var yMax = valueToYPixel(chartOptions.maxHrZone);
+        var yEasy = valueToYPosition(chartOptions.easyHrZone);
+        var yMedium = valueToYPosition(chartOptions.mediumHrZone);
+        var yMax = valueToYPosition(chartOptions.maxHrZone);
     
         context.lineWidth = chartOptions.grid.lineWidth*5;
         // context.strokeStyle = "rgba(164, 255, 36, 0.58)";
@@ -1292,6 +1302,7 @@ context.strokeStyle = '#00ffff';
         context.fillStyle = seriesOptions.fillStyle;
         context.fill();
       }
+*/
 
       context.restore();
     } // for each dataset
@@ -1328,15 +1339,15 @@ context.strokeStyle = '#00ffff';
       var step = (this.valueRange.max - this.valueRange.min) / chartOptions.grid.verticalSections;
       var stepPixels = dimensions.height / chartOptions.grid.verticalSections;
       for (var v = 1; v < chartOptions.grid.verticalSections; v++) {
-        var gy = dimensions.height - Math.round(v * stepPixels),
-            yValue = chartOptions.yIntermediateFormatter(this.valueRange.min + (v * step), labelsOptions.precision),
-            //left of right axis?
-            intermediateLabelPos =
-              labelsOptions.intermediateLabelSameAxis
-              ? (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2)
-              : (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0);
+        var gy1 = dimensions.height - Math.round(v * stepPixels);
+        var yValue = chartOptions.yIntermediateFormatter(this.valueRange.min + (v * step), labelsOptions.precision);
+        //left of right axis?
+        var intermediateLabelPos =
+          labelsOptions.intermediateLabelSameAxis
+          ? (chartOptions.scrollBackwards ? 0 : dimensions.width - context.measureText(yValue).width - 2)
+          : (chartOptions.scrollBackwards ? dimensions.width - context.measureText(yValue).width - 2 : 0);
 
-        context.fillText(yValue, intermediateLabelPos, gy - chartOptions.grid.lineWidth);
+        context.fillText(yValue, intermediateLabelPos, gy1 - chartOptions.grid.lineWidth);
       }
     }
 
@@ -1345,33 +1356,32 @@ context.strokeStyle = '#00ffff';
       var textUntilX = chartOptions.scrollBackwards
         ? context.measureText(minValueString).width
         : dimensions.width - context.measureText(minValueString).width + 4;      
-      for (var t = time - (time % chartOptions.grid.millisPerLine);
-           t >= oldestValidTime;
-           t -= chartOptions.grid.millisPerLine) {
+      for (var t1 = time - (time % chartOptions.grid.millisPerLine);
+          t1 >= oldestValidTime;
+          t1 -= chartOptions.grid.millisPerLine) {
         var gx = timeToXPosition(t, 0);
         // Only draw the timestamp if it won't overlap with the previously drawn one.
-        //if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  
+        if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  
         {
+
+          // Formats the timestamp based on user specified formatting function
+          // SmoothieChart.timeFormatter function above is one such formatting option
+          var tx = new Date(t1);
+          var ts = tx;
+          if ( chartOptions.timestampFormatter && chartOptions.timestampFormatterMillis ) {
+            ts = ( chartOptions.grid.millisPerLine > 1000 ) ? chartOptions.timestampFormatter(tx) : chartOptions.timestampFormatterMillis(tx, t);
+          } else {
+            if ( chartOptions.timestampFormatter ) {
+              ts = chartOptions.timestampFormatter(tx);
+            }
+          }
+          var tsWidth = context.measureText(ts).width;
           if ( ( typeof( chartOptions.labels.bRotateXAxisLabels ) !== "undefined" ) && chartOptions.labels.bRotateXAxisLabels ) {
             // mgtm draw x axis labels rotated
             context.save();
             context.translate(gx - tsWidth, dimensions.height - 2);
-context.rotate(-0.2*Math.PI);
-//context.rotate(-0.5*Math.PI);
+            context.rotate(-0.5*Math.PI);
           }
-          // Formats the timestamp based on user specified formatting function
-          // SmoothieChart.timeFormatter function above is one such formatting option
-          var tx = new Date(t);
-          var ts = tx;
-          if ( chartOptions.timestampFormatter && chartOptions.timestampFormatterMillis )
-            ts = ( chartOptions.grid.millisPerLine > 1000 ) ? chartOptions.timestampFormatter(tx) : chartOptions.timestampFormatterMillis(tx, t);
-          else if ( chartOptions.timestampFormatter )
-            ts = chartOptions.timestampFormatter(tx);
-          var tsWidth = context.measureText(ts).width;
-
-
-ts = "hello";
-
           textUntilX = chartOptions.scrollBackwards
             ? gx + tsWidth + 2
             : gx - tsWidth - 2;
@@ -1397,21 +1407,19 @@ ts = "hello";
     }
 
     // Display title.
-
-chartOptions.title.text = "hello";
-
     if (chartOptions.title.text !== '') {
       context.font = chartOptions.title.fontSize + 'px ' + chartOptions.title.fontFamily;
       var titleXPos = chartOptions.scrollBackwards ? dimensions.width - context.measureText(chartOptions.title.text).width - 2 : 2;
+      var titleYPos = 0;
       if (chartOptions.title.verticalAlign == 'bottom') {
         context.textBaseline = 'bottom';
-        var titleYPos = dimensions.height;
+        titleYPos = dimensions.height;
       } else if (chartOptions.title.verticalAlign == 'middle') {
         context.textBaseline = 'middle';
-        var titleYPos = dimensions.height / 2;
+        titleYPos = dimensions.height / 2;
       } else {
         context.textBaseline = 'top';
-        var titleYPos = 0;
+        titleYPos = 0;
       }
       context.fillStyle = chartOptions.title.fillStyle;
       context.fillText(chartOptions.title.text, titleXPos, titleYPos);
@@ -1420,19 +1428,19 @@ chartOptions.title.text = "hello";
     context.restore(); // See .save() above.
   };
 
-  function pad2(number) { return (number < 10 ? '0' : '') + number; }
-  function pad3(number) { return (number < 100 ? '0' : '') + pad2(number); }
+  function pad2(number) { return (number < 10 ? '0' : '') + number; };
+
+  function pad3(number) { return (number < 100 ? '0' : '') + pad2(number); };
 
   // Sample timestamp formatting function
   SmoothieChart.timeFormatter = function(date) {
     return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
   };
 
-    // Sample timestamp formatting function
-    SmoothieChart.timeFormatter = function(date) {
-      function pad2(number) { return (number < 10 ? '0' : '') + number }
-      return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
-    };
+  // Sample timestamp formatting function
+  SmoothieChart.timeFormatter = function(date) {
+    return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
+  };
 
   // Sample timestamp formatting function
   SmoothieChart.timeFormatterMillis = function( date, dateInFloatSeconds ) {
@@ -1443,4 +1451,4 @@ chartOptions.title.text = "hello";
   exports.TimeSeries = TimeSeries;
   exports.SmoothieChart = SmoothieChart;
 
-})(typeof exports === 'undefined' ? this : exports);
+} ) ( typeof exports === 'undefined' ? this : exports );
