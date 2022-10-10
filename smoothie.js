@@ -861,7 +861,7 @@
         // Render at least every 1/6th of a second. The canvas may be resized, which there is
         // no reliable way to detect.
 
-        var millisPeriod = 1000/6;
+        var millisPeriod = 1000/1;
         var needToRenderInCaseCanvasResized = nowMillis - this.lastRenderTimeMillis > millisPeriod;
         if (!needToRenderInCaseCanvasResized) {
           return;
