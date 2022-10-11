@@ -6,6 +6,9 @@ watching charts jerkily updating every second.
 
 See [http://smoothiecharts.org](http://smoothiecharts.org)
 
+This repository contains TrueKinetix's version of Smoothie Charts, with
+minor changes we have made to make it better suit our needs. 
+
 ---
 
 ### Getting Started
