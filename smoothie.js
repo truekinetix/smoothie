@@ -730,8 +730,7 @@
    * Starts the animation of this chart.
    */
   SmoothieChart.prototype.start = function() {
-
-    console.log( "TK Smoothie 20221010" );
+    console.log( "Smoothie TK20221011: Starting" );
 
     if (this.frame) {
       // We're already running, so just return
@@ -778,6 +777,8 @@
    * Stops the animation of this chart.
    */
   SmoothieChart.prototype.stop = function() {
+    console.log( "Smoothie: Stopping" );
+
     if (this.frame) {
       SmoothieChart.AnimateCompatibility.cancelAnimationFrame(this.frame);
       delete this.frame;
