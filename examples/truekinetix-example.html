@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="../smoothie.js"></script>
+    <script type="text/javascript">
+
+      var graphInfo = {
+        minValue: 0,
+        maxValue: 10000,
+        negativeScaling: false 
+      };
+
+      // Randomly add a data point every millisPeriod
+      var millisPeriod = 1000;
+      var random = new TimeSeries();
+      setInterval(
+        function() {
+          random.append(
+            Date.now(), 
+            graphInfo.minValue + ( Math.random() * (graphInfo.maxValue - graphInfo.minValue) ) 
+          );
+        }, 
+        millisPeriod
+      );
+
+      function calcYRangeSmoothies( range ) {
+        //console.log('!!!');
+        // old //////////////////////////////////////////////////////////////////////////
+        // var step = 50.0;
+        // var buffer = 10.0;
+        // var bottom = 0.0;
+
+        // var rangeMax = parseFloat(range.max);
+        // var rangeMin = parseFloat(range.min)
+        // var maxY = ( rangeMax + buffer) - ( (rangeMax + buffer) % step ) + step;
+        // var minY = bottom;
+        // if(rangeMin < bottom){
+        //     minY= ( rangeMin - buffer) + ( ((rangeMin*-1) + buffer) % step ) - step;
+        // }
+        /////////////////////////////////////////////////////////////////////////////////
+
+        //Calculate the y range to use to draw the graph, this is calculated every frame based on the min/max of the data to be displayed
+        //The size will grow with increasing steps, up to a maximum of 2000 and a minimum of -2000
+        //The nr of horizontal lines will always be the same, defined by the grid.verticalSections parameter (can be made dynamic by editing smoothie.js)
+
+        var steps = [50,100,200,500,1000,2000]
+        var rangeMax = parseFloat(range.max);
+        var rangeMin = parseFloat(range.min);
+        var bottomY = 0.0;
+        var buffer = 10.0;
+        var minY = 0.0;
+        var maxY = 50.0;
+
+        var i = 0;
+        // console.log(rangeMax)
+        while(rangeMax + buffer > steps[i]){
+          maxY = steps[i+1];
+          i++;
+        }
+        // console.log(rangeMin)
+        if (rangeMin < bottomY) {
+          minY = -50.0;
+          var i = 0;
+          while(rangeMin - buffer < -1 * steps[i]){
+              minY = -1 * steps[i+1];
+              i++;
+          }
+        } // else minY = 0.0;
+        
+        if ( isNaN( minY ) ) minY = -10.0;
+        if ( isNaN( maxY ) ) maxY = 100.0;
+
+        return { min: minY, max: maxY };
+        //console.log(graphInfo.type);
+      }
+
+      var targetValue = 0
+
+      var easyHrValue = 0;
+      var mediumHrValue = 0;
+      var hardHrValue = 0;
+
+      function createTimeline() {
+        // use our custom yaxis function ?
+        var theYRangeFunction = undefined;
+        var minValueToUse = graphInfo.minValue;
+        var maxValueToUse = graphInfo.maxValue;
+        // if ( ( graphInfo.minValue == 0 ) && ( graphInfo.maxValue == 0 ) ) {
+        //     theYRangeFunction = calcYRangeSmoothies
+        //     minValueToUse = undefined;
+        //     maxValueToUse = undefined;
+        // }
+        if ( graphInfo.maxValue == 0  ) {
+            theYRangeFunction = calcYRangeSmoothies
+            maxValueToUse = undefined;
+        }
+        if ( graphInfo.negativeScaling == "True") {
+            minValueToUse = undefined;
+        }
+
+        var chart = new SmoothieChart( {
+          limitFPS: 1,
+          grid: {
+            sharpLines: false,
+            millisPerLine: 60000, // mgtm performance, orig 25000
+            fillStyle: 'rgba(77,77,77,1.0)',
+            bordervisible: false,
+            verticalSections:5
+          },
+          targetPower: 0,
+          maxHrZone: hardHrValue,
+          mediumHrZone: mediumHrValue,
+          easyHrZone: easyHrValue,
+          yRangeFunction: theYRangeFunction,
+          //responsive: true, // resize properly mgtm performance, orig true
+          //bResizeOnlyOnce: true,
+          minValue: minValueToUse,
+          maxValue: maxValueToUse,
+          scaleSmoothing: 0.1,
+          timestampFormatter:SmoothieChart.timeFormatter,
+          labels: {
+            fontSize: 25,
+            showIntermediateLabels: true,
+            bRotateXAxisLabels: true,
+            precision:1
+          },          
+        } );
+
+        chart.addTimeSeries(
+          random, 
+          { 
+            strokeStyle: 'rgba(0, 255, 0, 1)', 
+            lineWidth: 1
+          }
+        );
+
+        chart.streamTo(document.getElementById("chart"), 1000);
+      }
+    </script>
+  </head>
+
+  <body onload="createTimeline()" style="background-color:#333333">
+
+    <canvas id="chart" width="300" height="200"></canvas>
+
+  </body>
+
+</html>
