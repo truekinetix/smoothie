@@ -384,14 +384,15 @@
 
   /** Formats the HTML string content of the tooltip. */
   SmoothieChart.tooltipFormatter = function (timestamp, data) {
-      var timestampFormatter = this.options.timestampFormatter || SmoothieChart.timeFormatter,
-          // A dummy element to hold children. Maybe there's a better way.
-          elements = document.createElement('div'),
-          label;
+      var timestampFormatterTooltip = this.options.timestampFormatter || SmoothieChart.timeFormatter;
+
+      // A dummy element to hold children. Maybe there's a better way
+      var elements = document.createElement('div');
       elements.appendChild(document.createTextNode(
-        timestampFormatter(new Date(timestamp))
+        timestampFormatterTooltip(new Date(timestamp))
       ));
 
+      var label;
       for (var i = 0; i < data.length; ++i) {
         label = data[i].series.options.tooltipLabel || ''
         if (label !== ''){
@@ -461,7 +462,7 @@
     tooltipFormatter: SmoothieChart.tooltipFormatter,
     nonRealtimeData: false,
     responsive: false,
-    limitFPS: 0
+    limitFPS: 1
   };
 
   // Based on http://inspirit.github.com/jsfeat/js/compatibility.js
@@ -846,8 +847,9 @@
     var nowMillis = Date.now();
 
     // Respect any frame rate limit.
-    if (this.options.limitFPS > 0 && nowMillis - this.lastRenderTimeMillis < (1000/this.options.limitFPS))
+    if (this.options.limitFPS > 0 && nowMillis - this.lastRenderTimeMillis < (1000/this.options.limitFPS)) {
       return;
+    }
 
     time = (time || nowMillis) - (this.delay || 0);
 
@@ -862,8 +864,8 @@
         // Render at least every 1/6th of a second. The canvas may be resized, which there is
         // no reliable way to detect.
 
-        var millisPeriod = 1000/1;
-        var needToRenderInCaseCanvasResized = nowMillis - this.lastRenderTimeMillis > millisPeriod;
+        var millisPeriodInCaseCanvasResized = 1000/6;
+        var needToRenderInCaseCanvasResized = nowMillis - this.lastRenderTimeMillis > millisPeriodInCaseCanvasResized;
         if (!needToRenderInCaseCanvasResized) {
           return;
         }
@@ -1356,14 +1358,21 @@
     if (chartOptions.timestampFormatter && chartOptions.grid.millisPerLine > 0) {    
       var textUntilX = chartOptions.scrollBackwards
         ? context.measureText(minValueString).width
-        : dimensions.width - context.measureText(minValueString).width + 4;      
+        : dimensions.width - context.measureText(minValueString).width + 4;
+
       for (var t1 = time - (time % chartOptions.grid.millisPerLine);
           t1 >= oldestValidTime;
           t1 -= chartOptions.grid.millisPerLine) {
-        var gx = timeToXPosition(t, 0);
+        var gx = timeToXPosition(t1, 0);
         // Only draw the timestamp if it won't overlap with the previously drawn one.
         if ((!chartOptions.scrollBackwards && gx < textUntilX) || (chartOptions.scrollBackwards && gx > textUntilX))  
         {
+          if ( ( typeof( chartOptions.labels.bRotateXAxisLabels ) !== "undefined" ) && chartOptions.labels.bRotateXAxisLabels ) {
+            // mgtm draw x axis labels rotated
+            context.save();
+            context.translate(gx - tsWidth, dimensions.height - 2);
+            context.rotate(-0.5*Math.PI);
+          }
 
           // Formats the timestamp based on user specified formatting function
           // SmoothieChart.timeFormatter function above is one such formatting option
@@ -1377,12 +1386,7 @@
             }
           }
           var tsWidth = context.measureText(ts).width;
-          if ( ( typeof( chartOptions.labels.bRotateXAxisLabels ) !== "undefined" ) && chartOptions.labels.bRotateXAxisLabels ) {
-            // mgtm draw x axis labels rotated
-            context.save();
-            context.translate(gx - tsWidth, dimensions.height - 2);
-            context.rotate(-0.5*Math.PI);
-          }
+
           textUntilX = chartOptions.scrollBackwards
             ? gx + tsWidth + 2
             : gx - tsWidth - 2;
@@ -1432,11 +1436,6 @@
   function pad2(number) { return (number < 10 ? '0' : '') + number; };
 
   function pad3(number) { return (number < 100 ? '0' : '') + pad2(number); };
-
-  // Sample timestamp formatting function
-  SmoothieChart.timeFormatter = function(date) {
-    return pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
-  };
 
   // Sample timestamp formatting function
   SmoothieChart.timeFormatter = function(date) {
