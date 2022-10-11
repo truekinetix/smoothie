@@ -364,6 +364,7 @@
    *                                             // useful when trying to see old data saved by setting a high value for maxDataSetLength
    *                                             // should be a value between 0 and 1
    *   responsive: false,                        // whether the chart should adapt to the size of the canvas
+   *   bResizeOnlyOnce: false,                   // resize once then never again
    *   limitFPS: 0                               // maximum frame rate the chart will render at, in FPS (zero means no limit)
    * }
    * </pre>
@@ -462,6 +463,7 @@
     tooltipFormatter: SmoothieChart.tooltipFormatter,
     nonRealtimeData: false,
     responsive: false,
+    bResizeOnlyOnce: false,
     limitFPS: 0
   };
 
@@ -678,13 +680,15 @@
    * Make sure the canvas has the optimal resolution for the device's pixel ratio.
    */
   SmoothieChart.prototype.resize = function () {
-    var dpr = !this.options.enableDpiScaling || !window ? 1 : window.devicePixelRatio,
-        width, height;
+    var dpr = ( !this.options.enableDpiScaling || !window ) ? 1 : window.devicePixelRatio;
+    var width;
+    var height;
+
     if (this.options.responsive) {
       // Newer behaviour: Use the canvas's size in the layout, and set the internal
       // resolution according to that size and the device pixel ratio (eg: high DPI)
-      width = this.canvas.offsetWidth;
-      height = this.canvas.offsetHeight;
+      width = this.canvas.width;
+      height = this.canvas.height;
 
       if (width !== this.lastWidth) {
         this.lastWidth = width;
@@ -872,22 +876,16 @@
       }
     }
 
-    // mgtm - without this moved here and changed, crashes in resize with null this.canvas
-    if ( typeof( canvas ) !== "undefined" ) {
-      this.canvas = canvas;
+    // should resize ?
+    if ( (typeof( this.options.bResizeOnlyOnce ) === "undefined") 
+        || !this.options.bResizeOnlyOnce 
+        || (typeof( this.bResizedOnce ) === "undefined") ) {
+      // resizes this.canvas:
+      this.resize();
+      this.bResizedOnce = true;
     }
 
-    // mgtm also see this.canvas set, but canvas undefined:
-    if ( typeof( canvas ) === "undefined" ) // trap problems
-      canvas = this.canvas;
-
     canvas = canvas || this.canvas;
-    this.canvas = canvas || this.canvas;
-
-    // resizes this.canvas:
-    this.resize();
-
-    canvas = this.canvas;
 
     this.updateTooltip();
 
@@ -992,7 +990,6 @@
         context.fillRect( 0, 0, dimensions.width, dimensions.height );
       }
     }
-
 
     // Vertical (time) dividers.
     if (chartOptions.grid.millisPerLine > 0) {
