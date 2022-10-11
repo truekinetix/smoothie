@@ -462,7 +462,7 @@
     tooltipFormatter: SmoothieChart.tooltipFormatter,
     nonRealtimeData: false,
     responsive: false,
-    limitFPS: 1
+    limitFPS: 0
   };
 
   // Based on http://inspirit.github.com/jsfeat/js/compatibility.js
@@ -944,7 +944,6 @@
     context.lineWidth = chartOptions.grid.lineWidth;
     context.strokeStyle = chartOptions.grid.strokeStyle;
  
-/*
     // background shaded for subsections
     for (var iSeriesSet = 0; iSeriesSet < this.seriesSet.length; iSeriesSet++) {
       context.save();
@@ -993,7 +992,7 @@
         context.fillRect( 0, 0, dimensions.width, dimensions.height );
       }
     }
-*/
+
 
     // Vertical (time) dividers.
     if (chartOptions.grid.millisPerLine > 0) {
@@ -1075,8 +1074,6 @@
       // Keep in mind that `context.lineWidth = 0` doesn't actually set it to `0`.
       var lineWidthMaybeZero = drawStroke ? seriesOptions.lineWidth : 0;
   
-/*      
-      // mgtm - 
       var indexTimeSwitchColour = undefined;
       var timeSwitchColour = undefined;
       if ( typeof( seriesOptions.arrayTimesSwitchColour ) !== "undefined" ) {
@@ -1086,7 +1083,6 @@
             timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
         } 
       }
-*/
 
       // Draw the line...
       context.beginPath();
@@ -1099,48 +1095,6 @@
         draw;
       context.moveTo(firstX, firstY);
 
-/*
-      var timePt = dataSet1[i][0];
-      var valuePt = dataSet1[i][1];
-      var x = timeToXPosition(timePt);
-      var y = valueToYPosition(valuePt);
-
-      // mgtm move line on bottom just off bottom
-      if ( y == dimensions.height ) { 
-          y -= 2;
-      }
-
-      // mgtm - alternate colours in line when past the given times
-      if ( ( chartOptions.alternateSubsections === "line" ) && ( typeof(timeSwitchColour) !== "undefined" ) ) {
-        if ( dataSet1[i][0] >= timeSwitchColour ) {
-
-          if ( typeof(lastX) !== "undefined" )
-              context.lineTo(x,y);
-
-          context.stroke();
-          context.closePath();
-
-
-          // alternate colours
-          if ( indexTimeSwitchColour % 2 == 0 ) {
-            context.lineWidth = seriesOptions.lineWidth;
-            context.strokeStyle = seriesOptions.strokeStyleAlternate;
-          } else {
-            context.lineWidth = seriesOptions.lineWidth;
-            context.strokeStyle = seriesOptions.strokeStyle;
-          }
-          context.beginPath();
-
-          if ( typeof(lastX) === "undefined" )
-              context.moveTo(x, y);
-          else
-              context.moveTo(lastX, lastY);
-
-          indexTimeSwitchColour += 1;
-          timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
-        }
-      }
-*/
 
       switch (seriesOptions.interpolation || chartOptions.interpolation) {
         case "linear":
@@ -1202,10 +1156,54 @@
         }
       }    
 
+      // do the drawing
       for (var i = 1; i < dataSet1.length; i++) {
+
+
+/*
+        // mgtm - alternate colours in line when past the given times
+        if ( ( chartOptions.alternateSubsections === "line" ) && ( typeof(timeSwitchColour) !== "undefined" ) ) {
+          if ( dataSet1[i][0] >= timeSwitchColour ) {
+  
+            if ( typeof(lastX) !== "undefined" )
+                context.lineTo(x,y);
+  
+            context.stroke();
+            context.closePath();
+  
+  
+            // alternate colours
+            if ( indexTimeSwitchColour % 2 == 0 ) {
+              context.lineWidth = seriesOptions.lineWidth;
+              context.strokeStyle = seriesOptions.strokeStyleAlternate;
+            } else {
+              context.lineWidth = seriesOptions.lineWidth;
+              context.strokeStyle = seriesOptions.strokeStyle;
+            }
+            context.beginPath();
+  
+            if ( typeof(lastX) === "undefined" )
+                context.moveTo(x, y);
+            else
+                context.moveTo(lastX, lastY);
+  
+            indexTimeSwitchColour += 1;
+            timeSwitchColour = seriesOptions.arrayTimesSwitchColour[ indexTimeSwitchColour ];
+          }
+        }
+*/
+
+
+
         var iThData = dataSet1[i];
         var x1 = timeToXPosition(iThData[0], lineWidthMaybeZero);
         var y1 = valueToYPosition(iThData[1], lineWidthMaybeZero);
+
+        // mgtm move line on bottom just off bottom
+        if ( y1 == dimensions.height ) { 
+          y1 -= 2;
+        }
+
         draw(x1, y1, lastX, lastY);
         lastX = x1; 
         lastY = y1;
@@ -1227,7 +1225,6 @@
         context.fill();
       }
 
-/*
       if ( chartOptions.targetPower > 0 ){
         context.lineWidth = chartOptions.grid.lineWidth*4;
         var ypower = valueToYPosition(chartOptions.targetPower )
@@ -1305,7 +1302,6 @@
         context.fillStyle = seriesOptions.fillStyle;
         context.fill();
       }
-*/
 
       context.restore();
     } // for each dataset
