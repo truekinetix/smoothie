@@ -1028,7 +1028,7 @@
           //
           draw = function(x, y, lastX, lastY) {
             context.bezierCurveTo( // startPoint (A) is implicit from last iteration of loop
-              Math.round((lastX + x) / 2), lastY, // controlPoint1 (P)
+              Math.round((lastX + x)) / 2, lastY, // controlPoint1 (P)
               Math.round((lastX + x)) / 2, y, // controlPoint2 (Q)
               x, y); // endPoint (B)
           }
