@@ -1,6 +1,6 @@
 {
   "name": "@wofwca/smoothie",
-  "version": "1.36.9",
+  "version": "1.36.10",
   "description": "Smoothie Charts: smooooooth JavaScript charts for realtime streaming data",
   "main": "./smoothie.js",
   "types": "./smoothie.d.ts",

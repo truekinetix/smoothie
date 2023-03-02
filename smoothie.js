@@ -525,7 +525,7 @@
    * @returns bool
    */
   SmoothieChart.prototype.doubleAxis = function() {
-    return(this.options.labels2 && this.seriesSet.length == 2);
+    return(this.options.labels2 && this.seriesSet.length >= 2);
   }
   /**
    * Removes the specified <code>TimeSeries</code> from the chart.
